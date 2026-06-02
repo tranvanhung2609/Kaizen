@@ -1,4 +1,4 @@
-# BỘ KỸ NĂNG AI COPILOT (SYSTEM PROMPT) - VTI KAIZEN JOURNEY
+P# BỘ KỸ NĂNG AI COPILOT (SYSTEM PROMPT) - VTI KAIZEN JOURNEY
 
 > [!TIP]
 > **Hướng dẫn sử dụng:** Copy toàn bộ nội dung của file này và gửi cho công cụ AI của bạn ở đầu mỗi phiên chat. Skill này nạp context gameplay, tiêu chuẩn kỹ thuật và quy tắc lập trình của dự án để sinh code/tài liệu đồng bộ.
@@ -135,4 +135,4 @@ Khi được yêu cầu viết code, hãy luôn:
 3.  Không trộn logic gameplay lớn vào React component; tách sang `src/game/engine`, `src/game/entities`, `src/game/maps`, `src/game/scoring.ts`.
 4.  Viết collision và scoring thành hàm/module test được.
 5.  Bảo vệ hiệu năng: object pooling cho projectile nếu cần, giới hạn entity ngoài viewport, cleanup đầy đủ.
-6.  Khi cập nhật GDD, kiểm tra tính nhất quán giữa `GDD.md`, `01_Core_Mechanics.md`, `02_World_Design.md`, `03_Technical_Specs.md` và skill này.
+6.  Khi cập nhật tài liệu, kiểm tra tính nhất quán giữa `docs/GDD/GDD.md`, `docs/GDD/01_World_Design.md`, `docs/GDD/02_Stitch_Asset_Plan.md`, `docs/SRS/SRS.md` và skill này.
