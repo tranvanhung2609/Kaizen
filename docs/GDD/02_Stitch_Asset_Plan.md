@@ -125,43 +125,68 @@ Style: premium semi-flat illustration, clean edges, controlled glow, not dark cy
 ## 7. Quy Ước File Tài Nguyên Đề Xuất
 
 ```text
-public/assets/game/
-  mascot/
-    hanoi_mascot_sheet.png
-    tokyo_mascot_sheet.png
-    danang_mascot_sheet.png
-  items/
-    hanoi_experience_flask.png
-    tokyo_experience_flask.png
-    danang_experience_flask.png
-    respect_shield_sheet.png
-    responsibility_wings_sheet.png
-    kaizen_keyboard_sheet.png
-  obstacles/
-    hanoi_pit.png
-    tokyo_pit.png
-    danang_pit.png
-    bomb_low_sheet.png
-    bomb_parachute_sheet.png
-  enemies/
-    hanoi_ground_bug_sheet.png
-    hanoi_flying_bug_sheet.png
-    tokyo_ground_bug_sheet.png
-    tokyo_flying_bug_sheet.png
-    danang_ground_bug_sheet.png
-    danang_flying_bug_sheet.png
-  bosses/
-    hanoi_deadline_boss_sheet.png
-    tokyo_kaizen_breaker_boss_sheet.png
-    danang_data_dragon_boss_sheet.png
-  cutscenes/
-    hanoi_opening.png
-    hanoi_boss_intro.png
-    hanoi_clear.png
-    tokyo_opening.png
-    tokyo_boss_intro.png
-    tokyo_clear.png
-    danang_opening.png
-    danang_boss_intro.png
-    final_clear.png
+public/assets/images/
+  hanoi/
+    mascot/
+      mascot_sheet.png
+    items/
+      experience_flask.png
+      experience_flask_collect.png
+      respect_shield_sheet.png
+      responsibility_wings_sheet.png
+      kaizen_keyboard_sheet.png
+      keyboard_projectiles_sheet.png
+    obstacles/
+      pit.png
+      pit_warning.png
+      bomb_low_sheet.png
+    enemies/
+      ground_bug_sheet.png
+      flying_bug_sheet.png
+      flying_bug_projectile.png
+    bosses/
+      deadline_boss_sheet.png
+      deadline_boss_projectiles_sheet.png
+      deadline_boss_intro.png
+    cutscenes/
+      opening.png
+      boss_intro.png
+      clear.png
+      to_tokyo_transition.png
+    hud/
+      heart_icon.png
+      score_icon.png
+      hud_icons_sheet.png
+      kaizen_energy_icon.png
+      responsibility_timer_icon.png
+      respect_timer_icon.png
+    backgrounds/
+      far_background.png
+      midground.png
+      foreground.png
+      ground_tiles.png
+      boss_arena_background.png
+  tokyo/
+    (Cấu trúc các nhóm thư mục tương tự như hanoi/, chứa tài nguyên riêng của map Tokyo)
+  danang/
+    (Cấu trúc các nhóm thư mục tương tự như hanoi/, chứa tài nguyên riêng của map Đà Nẵng)
+
+public/assets/audio/
+  common/
+    (Các hiệu ứng click, hover UI dùng chung)
+  hanoi/
+    runner_bgm.mp3
+    boss_bgm.mp3
+    sfx/
+      (Các hiệu ứng âm thanh như flask, shield, wings, shoot, v.v. của Hà Nội)
+  tokyo/
+    runner_bgm.mp3
+    boss_bgm.mp3
+    sfx/
+      (Các hiệu ứng âm thanh đặc thù cho map Tokyo)
+  danang/
+    runner_bgm.mp3
+    boss_bgm.mp3
+    sfx/
+      (Các hiệu ứng âm thanh đặc thù cho map Đà Nẵng)
 ```
