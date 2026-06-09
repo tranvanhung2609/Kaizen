@@ -101,3 +101,17 @@ Khi viết hoặc sửa đổi code, luôn tuân thủ:
     *   `src/game/entities/` - Player, Enemy, Boss, Projectile, Obstacle.
     *   `src/game/maps/` - ParallaxBackground, LevelManager.
     *   `src/lib/supabase.ts` - Client kết nối cơ sở dữ liệu.
+
+---
+
+## 7. QUY CHUẨN THIẾT KẾ WEB UI/UX (VIBRANT GLASSMORPHISM DARK MODE)
+Khi tạo hoặc chỉnh sửa các trang giao diện Web (như `/login`, `/game` container, `/leaderboard`, `/admin`), bắt buộc tuân thủ bộ quy chuẩn mỹ thuật để đồng bộ với in-game Canvas:
+*   **Màu nền cơ sở (Base Background):** Dải màu Gradient chuyển sắc từ xanh biển cực đậm sang tím vũ trụ (`bg-gradient-to-br from-[#070913] via-[#0b0e26] to-[#12163b]`) kèm hiệu ứng phát sáng mờ ảo ở các góc.
+*   **Màu thương hiệu & Trạng thái:**
+    *   **VTI Blue (Primary):** `#0054a6` (Accent Neon phát sáng: `#00d2ff`).
+    *   **VTI Orange (Secondary/CTA):** `#ff8500` (hover: `#ff9d33`), dùng cho nút SSO Login, nút bắt đầu hoặc xác nhận.
+    *   **Kaizen Green (Success/Meter):** `#00ff87`, dùng cho thứ hạng dẫn đầu, thanh năng lượng và trạng thái thành công.
+*   **Hiệu ứng Kính mờ (Glassmorphism):** Containers bán trong suốt sử dụng bo góc mềm và viền kính siêu mỏng (`rounded-2xl` hoặc `rounded-3xl`, `bg-white/[0.03]` hoặc `bg-[#0b0e26]/50`, `backdrop-blur-md` hoặc `backdrop-blur-xl`, `border border-white/10`, kết hợp bóng đổ nhẹ `shadow-[0_0_20px_rgba(0,84,166,0.15)]`).
+*   **Typography:** Phông chữ nội dung UI chính sử dụng `Inter`, các số điểm/thứ hạng hoặc tiêu đề lớn sử dụng `Orbitron` hoặc `Rajdhani` để tạo cảm giác công nghệ.
+*   **Tương tác (Micro-animations):** Toàn bộ các nút bấm và thẻ phải có hiệu ứng transition chuyển sắc mịn (`transition-all duration-300 ease-in-out`), hover glow phát sáng nhẹ, và co lại khi nhấn (`active:scale-95`).
+

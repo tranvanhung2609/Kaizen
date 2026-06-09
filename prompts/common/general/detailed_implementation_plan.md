@@ -192,16 +192,21 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
 
 ```text
 prompts/
-  nam.buihai/       <- Trưởng nhóm Bùi Hải Nam (Lưu kế hoạch triển khai, asset manifests & prompts sinh ảnh)
-    plan/
+  nam.buihai/       <- Trưởng nhóm Bùi Hải Nam (Lưu các assets/manifests & prompts sinh ảnh)
     assets/
   common/
-    general/        <- Thư mục chứa các tệp prompt và tài nguyên dùng chung cho cả team
+    general/        <- Thư mục chứa kế hoạch triển khai (detailed_implementation_plan.md) và các tài nguyên dùng chung
+                       (Ví dụ: ui_design_guidelines_and_prompts.md)
   hung.tranvan/     <- Lập trình viên Trần Văn Hưng (Lưu các prompts thuật toán Canvas, Vật lý & Va chạm)
   dat.vothanh/      <- Lập trình viên Võ Thành Đạt (Lưu các prompts thiết kế React UI, HUD & Pages)
   quan.dodam/       <- Lập trình viên Đỗ Đàm Quân (Lưu các prompts DB Schema, APIs & SSO)
   thao.damphuong/   <- Kiểm thử viên Đàm Phương Thảo (Lưu các prompts sinh test cases tự động)
 ```
+
+> [!TIP]
+> **Đồng bộ thiết kế Web UI/UX:** Cả team sử dụng chung tài liệu [ui_design_guidelines_and_prompts.md](./ui_design_guidelines_and_prompts.md) để đảm bảo các màn hình phụ trợ (Login, Leaderboard, Admin) đồng nhất phong cách Vibrant Dark Mode & Glassmorphism với in-game Canvas.
+
+
 
 
 ---
@@ -321,6 +326,6 @@ prompts/
 
 ## 🎨 PHỤ LỤC: DANH SÁCH PROMPT BATCH DÀNH CHO STITCH
 Đội Art copy trực tiếp các đoạn prompt này vào Stitch MCP để sinh tài nguyên:
-* **Hà Nội:** Xem tại [hanoi_stitch_prompts.md](../assets/hanoi_stitch_prompts.md).
+* **Hà Nội:** Xem tại [hanoi_stitch_prompts.md](../../nam.buihai/assets/hanoi_stitch_prompts.md).
 * **Tokyo:** Sử dụng prompt trong `Giai đoạn 2` của Kế hoạch triển khai để sinh 30 ảnh tương ứng.
 * **Đà Nẵng:** Sử dụng prompt trong `Giai đoạn 2` của Kế hoạch triển khai để sinh 30 ảnh tương ứng.

@@ -27,7 +27,8 @@ Thông điệp chủ đạo: **"VTI 9 Năm - Công nghệ kiến tạo giá tr�
 *   **[Thể lệ AI Gameathon D5](./docs/Thể lệ%20AI%20Gameathon%20D5.md):** Quy định và yêu cầu chính thức từ BTC cuộc thi.
 
 ### 2. Kế hoạch & Prompts Định hướng AI (Thư mục `prompts/`)
-*   **[Kế hoạch triển khai & cài đặt Database](./prompts/nam.buihai/plan/detailed_implementation_plan.md):** Tài liệu hướng dẫn thiết lập project Supabase, chạy SQL migration và cấu hình biến môi trường.
+*   **[Kế hoạch triển khai & cài đặt Database](./prompts/common/general/detailed_implementation_plan.md):** Tài liệu hướng dẫn thiết lập project Supabase, chạy SQL migration và cấu hình biến môi trường.
+*   **[Quy chuẩn Thiết kế UI/UX & Prompts mẫu](./prompts/common/general/ui_design_guidelines_and_prompts.md):** Hướng dẫn nhất quán phong cách giao diện Vibrant Glassmorphism Dark Mode.
 *   **[Mẫu Prompt sinh ảnh Hà Nội](./prompts/nam.buihai/assets/hanoi_stitch_prompts.md):** Tổng hợp các prompt mẫu dùng cho Stitch MCP để tạo assets Hà Nội.
 *   **[Danh mục Manifest Assets Hà Nội](./prompts/nam.buihai/assets/hanoi_asset_manifest.md):** Danh sách liệt kê trạng thái của từng tệp tin ảnh Hà Nội.
 
