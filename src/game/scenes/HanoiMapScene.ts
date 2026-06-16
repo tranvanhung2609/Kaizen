@@ -1,41 +1,60 @@
 import Phaser from 'phaser';
+import { RUNNER_PHYSICS } from '../constants';
 
+// ─── HanoiMapScene ─────────────────────────────────────────────────────────────
+// Scene preview / debug tool để kiểm tra parallax backgrounds, physics ground
+// và player mascot trực tiếp — không cần gameplay đầy đủ.
+//
+// Controls:
+//   [SPACE / Click / Tap] — Nhảy
+//   [S / Down]            — Cúi
+//   [LEFT / RIGHT]        — Điều chỉnh tốc độ cuộn
+//   [UP / DOWN]           — Nhìn lên/xuống
+//   [D]                   — Toggle debug panel
+//   [ESC]                 — Quay lại menu
 export default class HanoiMapScene extends Phaser.Scene {
-  // Parallax layers
+  // ── Parallax Layers ──────────────────────────────────────────────────────
   private bgSkyLayer!: Phaser.GameObjects.TileSprite;
-  private cloudsLayer!: Phaser.GameObjects.TileSprite;
-  private bgFarLayer!: Phaser.GameObjects.TileSprite;
-  private bgMidLayer!: Phaser.GameObjects.TileSprite;
-  private fgSceneryLayer!: Phaser.GameObjects.TileSprite;
+  private cloudsLayer1!: Phaser.GameObjects.TileSprite;
+  private cloudsLayer2!: Phaser.GameObjects.TileSprite;
+  private fgSceneryLayer2!: Phaser.GameObjects.TileSprite;
+  private cloudsOffset1 = 0;
+  private cloudsOffset2 = 0;
 
-  // Dynamic pathway platforms
-  private pathwayGroup!: Phaser.GameObjects.Group;
+  // ── Pathway Platforms ────────────────────────────────────────────────────
+  private pathwayGroup!: Phaser.Physics.Arcade.StaticGroup;
   private nextPlatformX = 0;
-  private groundY = 400; // Pathway vertical position
-  private pathwayThickness = 64; // Road visual thickness (64px tile height)
+  private readonly groundY = 380;
 
-  // Camera & Scroll Control
-  private scrollSpeed = 3; // Pixels per frame (auto-scroll speed)
+  // ── Player Preview ───────────────────────────────────────────────────────
+  private player!: Phaser.Physics.Arcade.Sprite;
+  private coyoteTimeLeft = 0;
+  private jumpBufferTimeLeft = 0;
+  private jumpKeyWasDown = false;
+
+  // ── Camera & Scroll ──────────────────────────────────────────────────────
+  private scrollSpeed = 3;
   private isPaused = false;
   private camX = 0;
   private camY = 0;
 
-  // HUD state change tracking to prevent React infinite rendering loop
+  // ── HUD throttle ─────────────────────────────────────────────────────────
   private lastScore = -1;
   private lastTimeElapsed = -1;
   private lastEnergy = -1;
   private lastPhase = '';
 
-  // Debug HUD elements
+  // ── Debug ─────────────────────────────────────────────────────────────────
   private debugText!: Phaser.GameObjects.Text;
   private showDebug = true;
 
-  // Keys
+  // ── Input ─────────────────────────────────────────────────────────────────
   private keys!: {
     left: Phaser.Input.Keyboard.Key;
     right: Phaser.Input.Keyboard.Key;
     up: Phaser.Input.Keyboard.Key;
     down: Phaser.Input.Keyboard.Key;
+    s: Phaser.Input.Keyboard.Key;
     space: Phaser.Input.Keyboard.Key;
     d: Phaser.Input.Keyboard.Key;
   };
@@ -45,302 +64,295 @@ export default class HanoiMapScene extends Phaser.Scene {
   }
 
   create() {
-    const width = this.cameras.main.width; // 960
+    const width = this.cameras.main.width;   // 960
     const height = this.cameras.main.height; // 540
 
-    console.log('HanoiMapScene created. Initializing 3D Parallax layers...');
+    console.log('HanoiMapScene created — Parallax + Player Preview mode');
 
-    // 0. Solid background gradient to prevent any transparency leak
-    const bgGradient = this.add.graphics();
-    // Dark indigo/navy to warm sunset purple gradient
-    const renderWidth = width + 1000; // Extra width to prevent black gaps on right on widescreen resolutions
-    bgGradient.fillGradientStyle(0x060611, 0x060611, 0x2a1639, 0x2a1639, 1);
-    bgGradient.fillRect(0, 0, renderWidth, height);
-    bgGradient.setScrollFactor(0);
-    bgGradient.setDepth(-1);
+    // ── 0. Base gradient backdrop ────────────────────────────────────────
+    const renderWidth = width + 1000;
+    this.add.graphics()
+      .fillGradientStyle(0x060611, 0x060611, 0x2a1639, 0x2a1639, 1)
+      .fillRect(0, 0, renderWidth, height)
+      .setScrollFactor(0)
+      .setDepth(-1);
 
-    const scale = height / 1024; // Scale factor for 1024x1024 square background assets
+    const scale = height / 1024;
 
-    // 1. LAYER 0: Sky Strip (Landmarks / Sunset from design sheet)
+    // ── 1. Sky (depth 0) ──────────────────────────────────────────────────
     this.bgSkyLayer = this.add.tileSprite(0, 0, renderWidth, height, 'hanoi_bg_sky')
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(0)
-      .setTileScale(scale, scale);
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(0).setTileScale(scale, scale);
 
-    // 2. LAYER 1: Clouds (Upper sky)
-    this.cloudsLayer = this.add.tileSprite(0, 0, renderWidth, height, 'hanoi_clouds_floating')
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(1)
-      .setAlpha(0.85)
-      .setTileScale(scale, scale);
+    // ── 2. Clouds (depth 1) ───────────────────────────────────────────
+    this.cloudsLayer1 = this.add.tileSprite(0, 0, renderWidth, 220, 'hanoi_clouds_floating')
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(1).setAlpha(0.9).setTileScale(scale * 0.5, scale * 0.5);
+    this.cloudsLayer1.tilePositionY = 310;
 
-    // 3. LAYER 2: Far Landmarks (Turtle Tower, Cầu Thê Húc, VTI Office from design sheet)
-    this.bgFarLayer = this.add.tileSprite(0, 0, renderWidth, height, 'hanoi_bg_far_landmarks')
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(2)
-      .setTileScale(scale, scale); 
+    // ── 5. Foreground (depth 7) ────────────────────────────────────────
+    this.fgSceneryLayer2 = this.add.tileSprite(0, height, renderWidth, 260, 'hanoi_fg_clean_v2')
+      .setOrigin(0, 1).setScrollFactor(0).setDepth(7).setTileScale(scale * 1.3, scale * 1.3);
 
-    // 4. LAYER 3: Mid City
-    // scenery_clean.png has height 103, place it sitting right on the pavement (this.groundY = 400 - 103 = 297)
-    this.bgMidLayer = this.add.tileSprite(0, 297, renderWidth, 103, 'hanoi_bg_mid_city')
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(3); 
-
-    // 5. LAYER 4: Foreground Details (Street lamps, hanging leaves, flowers)
-    this.fgSceneryLayer = this.add.tileSprite(0, 0, renderWidth, height, 'hanoi_fg_scenery')
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(4)
-      .setTileScale(scale, scale);
-
-    // 6. LAYER 5: Pathway Platforms (Pavement road blocks with pits)
-    // depth = 5
-    this.pathwayGroup = this.add.group();
+    // ── 6. Physics Static Ground (invisible, depth 5) ─────────────────────
+    // Dùng StaticGroup để player đứng được — giống GameScene thực
+    this.pathwayGroup = this.physics.add.staticGroup();
     this.nextPlatformX = 0;
-    
-    // Generate initial platforms to cover the starting screen
     this.generatePathway(width + 500);
 
-    // 6. Setup Controls
+    // ── 7. Player Mascot Preview (depth 5) ────────────────────────────────
+    this.player = this.physics.add.sprite(150, 300, 'mascot_male');
+    this.player.setGravityY(RUNNER_PHYSICS.gravity);
+    this.player.setCollideWorldBounds(false); // Không giới hạn world bounds — scene cuộn
+    this.player.setScale(0.6).setDepth(5);
+    this.player.setVisible(true); // Made visible so player is controllable
+    (this.player.body as Phaser.Physics.Arcade.Body).setSize(40, 120).setOffset(65, 84);
+    this.player.play('male_run');
+
+    // Collider player vs ground
+    this.physics.add.collider(this.player, this.pathwayGroup);
+
+    // World bounds cho camera chứ không phải physics world
+    this.physics.world.setBounds(0, 0, 99999, height);
+    this.physics.world.setBoundsCollision(true, false, false, false);
+
+    // Camera follow player
+    this.cameras.main.startFollow(this.player, true, 1.0, 1.0, -250, 0);
+
+    // ── 8. Input Keys ─────────────────────────────────────────────────────
     this.keys = {
-      left: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
+      left:  this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
       right: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
-      up: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
-      down: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+      up:    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
+      down:  this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+      s:     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       space: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
-      d: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D)
+      d:     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
 
-    // 7. Setup Debug HUD
-    this.createDebugHUD();
-
-    // Emit initial HUD state for React overlay
-    this.game.events.emit('hud-update', {
-      score: 0,
-      hearts: 3,
-      energy: 0,
-      bossHp: 0,
-      maxBossHp: 0,
-      phase: 'map_preview',
-      timeElapsed: 0,
-      mapKey: 'hanoi_preview',
-      mapName: 'Hà Nội (Preview)'
+    // Pointer / Touch → Jump Buffer (giống GameScene — click chuột hoặc tap để nhảy)
+    this.input.on('pointerdown', () => {
+      this.jumpBufferTimeLeft = RUNNER_PHYSICS.JUMP_BUFFER_MS;
     });
 
-    // Reset camera positions
-    this.camX = 0;
-    this.camY = 0;
-    this.cameras.main.setScroll(this.camX, this.camY);
-
-    // 8. Back to menu callback
-    this.add.text(20, 20, '← Press ESC to Menu', {
-      font: '14px Courier New, monospace',
-      color: '#00e5ff',
-      backgroundColor: '#111125dd',
-      padding: { x: 10, y: 5 }
-    })
-    .setScrollFactor(0)
-    .setDepth(10)
-    .setInteractive({ useHandCursor: true })
-    .on('pointerdown', () => this.scene.start('MenuScene'));
-
-    this.input.keyboard!.on('keydown-ESC', () => {
-      this.scene.start('MenuScene');
-    });
-
-    // Space key to toggle pause
-    this.input.keyboard!.on('keydown-SPACE', () => {
-      this.isPaused = !this.isPaused;
-    });
-
-    // D key to toggle debug panel
-    this.input.keyboard!.on('keydown-D', () => {
+    // ── 9. Key shortcuts ──────────────────────────────────────────────────
+    this.input.keyboard!.on('keydown-ESC', () => this.scene.start('MenuScene'));
+    this.input.keyboard!.on('keydown-D',   () => {
       this.showDebug = !this.showDebug;
       this.debugText.setVisible(this.showDebug);
     });
+
+    // ── 10. UI Overlays ───────────────────────────────────────────────────
+    this.add.text(20, 20, '← ESC to Menu', {
+      font: '14px Courier New, monospace',
+      color: '#00e5ff',
+      backgroundColor: '#111125dd',
+      padding: { x: 10, y: 5 },
+    }).setScrollFactor(0).setDepth(10)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => this.scene.start('MenuScene'));
+
+    this.createDebugHUD();
+
+    // ── 11. Initial HUD emit ──────────────────────────────────────────────
+    this.game.events.emit('hud-update', {
+      score: 0, hearts: 3, energy: 0, bossHp: 0, maxBossHp: 0,
+      phase: 'map_preview', timeElapsed: 0,
+      mapKey: 'hanoi_preview', mapName: 'Hà Nội (Preview)',
+    });
+
+    this.cameras.main.setScroll(this.camX, this.camY);
   }
 
   update(time: number, delta: number) {
-    // 1. Process Keyboard Controls
-    this.handleKeyboardInputs();
+    this.handleScrollKeys();
 
-    // 2. Perform Camera Auto-scroll
     if (!this.isPaused) {
-      this.camX += this.scrollSpeed;
-      this.cameras.main.setScroll(this.camX, this.camY);
-
-      // Procedural pathway platform generation ahead of camera viewport
-      const viewportRight = this.camX + this.cameras.main.width;
-      this.generatePathway(viewportRight + 500);
-
-      // Clean up offscreen platforms to preserve memory
+      // Generate terrain ahead of player
+      const ahead = this.player.x + 1500;
+      this.generatePathway(ahead);
       this.cleanupOffscreenPlatforms();
     }
 
-    // 3. Update Parallax Backgrounds offsets
-    // Formula: ScrollOffset = CameraX * ScrollFactor
-    this.bgSkyLayer.tilePositionX = this.camX * 0.05;
-    
-    // Clouds layer: custom scroll factor + slow independent wind drift
-    this.cloudsLayer.tilePositionX = (this.camX * 0.1) + (time * 0.02);
-    
-    this.bgFarLayer.tilePositionX = this.camX * 0.3;
-    this.bgMidLayer.tilePositionX = this.camX * 0.6;
-    this.fgSceneryLayer.tilePositionX = this.camX * 1.5; // moves faster than pathway (1.0x) to create foreground depth
+    // ── Player Physics ────────────────────────────────────────────────────
+    this.updatePlayer(delta);
 
-    // 4. Update Debug HUD Text
-    if (this.showDebug) {
-      this.updateDebugText();
-    }
+    // ── Parallax ─────────────────────────────────────────────────────────
+    const cx = this.cameras.main.scrollX;
+    this.cloudsOffset1 += 0.15;
 
-    // Emit HUD updates safely (throttled to actual state changes)
+    this.bgSkyLayer.tilePositionX      = cx * 0.01;
+    this.cloudsLayer1.tilePositionX     = cx * 0.05 + this.cloudsOffset1;
+    this.fgSceneryLayer2.tilePositionX  = cx * 1.60;
+
+    // ── Debug HUD ─────────────────────────────────────────────────────────
+    if (this.showDebug) this.updateDebugText();
+
     this.emitHudState(time);
   }
 
-  private emitHudState(time: number) {
-    const roundedScore = Math.round(this.camX);
-    const roundedTime = Math.round(time / 1000);
-    const roundedEnergy = Math.floor(Math.min(100, (this.camX / 30) % 100));
-    const currentPhase = 'map_preview';
+  // ─── Player Movement (Jump Feel — giống GameScene) ────────────────────────
+  private updatePlayer(delta: number): void {
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
+    const onGround = body.touching.down;
+    const jumpKeyDown = this.keys.up.isDown || this.keys.space.isDown;
+    const isCrouching = this.keys.down.isDown || this.keys.s.isDown;
+    const justPressedJump = jumpKeyDown && !this.jumpKeyWasDown;
+    this.jumpKeyWasDown = jumpKeyDown;
 
-    if (
-      roundedScore === this.lastScore &&
-      roundedTime === this.lastTimeElapsed &&
-      roundedEnergy === this.lastEnergy &&
-      currentPhase === this.lastPhase
-    ) {
-      return; // Skip emitting to prevent React loop
+    // Auto-run (preview mode)
+    this.player.setVelocityX(this.scrollSpeed * 60);
+
+    // Coyote Time
+    if (!onGround && body.velocity.y >= 0) {
+      if (this.coyoteTimeLeft === 0 && this.jumpKeyWasDown === false) {
+        this.coyoteTimeLeft = RUNNER_PHYSICS.COYOTE_TIME_MS;
+      }
+    } else {
+      this.coyoteTimeLeft = 0;
+    }
+    if (this.coyoteTimeLeft > 0) this.coyoteTimeLeft -= delta;
+
+    // Jump Buffer
+    if (justPressedJump) this.jumpBufferTimeLeft = RUNNER_PHYSICS.JUMP_BUFFER_MS;
+    if (this.jumpBufferTimeLeft > 0) this.jumpBufferTimeLeft -= delta;
+
+    const canJump = onGround || this.coyoteTimeLeft > 0;
+    const wantsJump = this.jumpBufferTimeLeft > 0;
+
+    if (wantsJump && canJump) {
+      this.player.setVelocityY(RUNNER_PHYSICS.jumpForce);
+      this.player.play('male_jump', true);
+      this.coyoteTimeLeft = 0;
+      this.jumpBufferTimeLeft = 0;
     }
 
-    this.lastScore = roundedScore;
-    this.lastTimeElapsed = roundedTime;
-    this.lastEnergy = roundedEnergy;
-    this.lastPhase = currentPhase;
+    // Variable height
+    if (!jumpKeyDown && body.velocity.y < -50) {
+      const dampFactor = Math.pow(RUNNER_PHYSICS.JUMP_DAMPING_RATIO, delta / 16.67);
+      body.setVelocityY(body.velocity.y * dampFactor);
+    }
 
-    this.game.events.emit('hud-update', {
-      score: roundedScore,
-      hearts: 3,
-      energy: roundedEnergy,
-      bossHp: 0,
-      maxBossHp: 0,
-      phase: currentPhase,
-      timeElapsed: roundedTime,
-      mapKey: 'hanoi_preview',
-      mapName: 'Hà Nội (Preview)'
-    });
+    // Animation state machine
+    if (isCrouching && onGround) {
+      if (this.player.anims.currentAnim?.key !== 'male_crouch') {
+        this.player.play('male_crouch');
+        body.setSize(40, 80).setOffset(65, 124);
+      }
+    } else if (onGround) {
+      if (this.player.anims.currentAnim?.key !== 'male_run') {
+        this.player.play('male_run', true);
+        body.setSize(40, 120).setOffset(65, 84);
+      }
+    } else {
+      body.setSize(40, 120).setOffset(65, 84);
+    }
   }
 
-  private handleKeyboardInputs() {
-    // Adjust speed using Left/Right keys
-    if (this.keys.left.isDown) {
-      this.scrollSpeed = Math.max(-10, this.scrollSpeed - 0.1);
-    } else if (this.keys.right.isDown) {
-      this.scrollSpeed = Math.min(25, this.scrollSpeed + 0.1);
-    }
-
-    // Adjust Camera Y using Up/Down to inspect parallax height offsets
-    if (this.keys.up.isDown) {
-      this.camY = Math.max(-100, this.camY - 2);
-      this.cameras.main.setScroll(this.camX, this.camY);
-    } else if (this.keys.down.isDown) {
-      this.camY = Math.min(100, this.camY + 2);
-      this.cameras.main.setScroll(this.camX, this.camY);
-    }
+  private handleScrollKeys(): void {
+    // LEFT/RIGHT: tăng/giảm scroll speed
+    if (this.keys.left.isDown) this.scrollSpeed = Math.max(-10, this.scrollSpeed - 0.1);
+    else if (this.keys.right.isDown) this.scrollSpeed = Math.min(25, this.scrollSpeed + 0.1);
   }
 
-  /**
-   * Procedurally generates path/road blocks with empty spaces (pits) in between.
-   */
-  private generatePathway(targetX: number) {
+  // ─── Terrain Generation ───────────────────────────────────────────────────
+  private generatePathway(targetX: number): void {
     while (this.nextPlatformX < targetX) {
-      // 1. Determine platform width (256px to 640px)
       const platformWidth = Phaser.Math.Between(256, 640);
-      
-      // Create a TileSprite for this specific platform block
-      // Sits at groundY (400), thickness = 60
-      const platform = this.add.tileSprite(
-        this.nextPlatformX, 
-        this.groundY, 
-        platformWidth, 
-        this.pathwayThickness, 
-        'hanoi_road_track'
-      )
-        .setOrigin(0, 0)
-        .setDepth(5);
-      
-      // Scale texture tiling to lock visually in place (doesn't slide as camera scrolls)
-      // By default, a TileSprite scrolls its texture with its position, which is perfect for platforms.
-      
-      // Add reference to group for cleanup tracking
-      this.pathwayGroup.add(platform);
 
-      // Advance our spawning marker by the platform width
+      // Visual road strip (TileSprite — sử dụng hanoi_ground_tiles)
+      const visualPlatform = this.add.tileSprite(
+        this.nextPlatformX, this.groundY, platformWidth, 40, 'hanoi_ground_tiles'
+      ).setOrigin(0, 0).setDepth(5);
+      
+      visualPlatform.setTileScale(64 / 512, 40 / 286);
+      visualPlatform.tilePositionX = this.nextPlatformX * 8;
+
+      // Invisible physics block dưới visual
+      const block = this.pathwayGroup.create(
+        this.nextPlatformX + platformWidth / 2,
+        this.groundY + 20,
+        'hanoi_tileset'
+      );
+      block.setDisplaySize(platformWidth, 40).setAlpha(0);
+      block.body.updateFromGameObject();
+      block.body.immovable = true;
+
       this.nextPlatformX += platformWidth;
 
-      // 2. Determine pit/gap width (120px to 256px)
-      const gapWidth = Phaser.Math.Between(120, 256);
-      
-      // Simply skip spawning any ground over this gap!
-      // This leaves an empty pit where the background layers (sky, buildings) will show through clearly.
+      // Gap (pit)
+      const gapWidth = Phaser.Math.Between(100, 220);
       this.nextPlatformX += gapWidth;
     }
   }
 
-  /**
-   * Destroys platforms that have scrolled offscreen to the left to optimize memory.
-   */
-  private cleanupOffscreenPlatforms() {
-    this.pathwayGroup.getChildren().forEach((platformObj: any) => {
-      const platform = platformObj as Phaser.GameObjects.TileSprite;
-      // If the right edge of the platform is further left than the camera viewport left edge
-      if (platform.x + platform.width < this.camX - 200) {
-        platform.destroy();
-      }
+  private cleanupOffscreenPlatforms(): void {
+    const leftEdge = this.cameras.main.scrollX - 200;
+    this.pathwayGroup.getChildren().forEach((obj: any) => {
+      if (obj.x + (obj.displayWidth ?? 64) < leftEdge) obj.destroy();
     });
   }
 
-  private createDebugHUD() {
-    const hudBg = this.add.graphics()
-      .fillStyle(0x0a0a1add, 0.85)
-      .fillRoundedRect(10, 80, 340, 240, 8)
+  // ─── Debug HUD ────────────────────────────────────────────────────────────
+  private createDebugHUD(): void {
+    this.add.graphics()
+      .fillStyle(0x0a0a1a, 0.85)
+      .fillRoundedRect(10, 50, 360, 290, 8)
       .lineStyle(2, 0x00e5ff, 1)
-      .strokeRoundedRect(10, 80, 340, 240, 8)
-      .setScrollFactor(0)
-      .setDepth(9);
+      .strokeRoundedRect(10, 50, 360, 290, 8)
+      .setScrollFactor(0).setDepth(9);
 
-    this.debugText = this.add.text(25, 95, '', {
-      font: '13px Courier New, monospace',
+    this.debugText = this.add.text(25, 65, '', {
+      font: '12px Courier New, monospace',
       color: '#ffffff',
-      lineSpacing: 6
-    })
-      .setScrollFactor(0)
-      .setDepth(10);
+      lineSpacing: 5,
+    }).setScrollFactor(0).setDepth(10);
   }
 
-  private updateDebugText() {
+  private updateDebugText(): void {
+    const body = this.player.body as Phaser.Physics.Arcade.Body;
     this.debugText.setText([
-      `--- HANOI 3D PARALLAX DEBUG ---`,
-      `Camera Scroll X : ${Math.round(this.camX)} px`,
-      `Camera Scroll Y : ${Math.round(this.camY)} px`,
-      `Scroll Speed    : ${this.scrollSpeed.toFixed(1)} px/f`,
-      `Status          : ${this.isPaused ? 'PAUSED' : 'SCROLLING'}`,
-      `--------------------------------`,
-      `Z-DEPTH LAYER SPEEDS & RATIOS:`,
-      `L0 Sky (Depth 0)      : Ratio 0.05x`,
-      `L1 Clouds (Depth 1)   : Ratio 0.10x + Wind`,
-      `L2 Far BG (Depth 2)   : Ratio 0.30x`,
-      `L3 Mid City (Depth 3) : Ratio 0.60x`,
-      `L4 Foregrnd (Depth 4) : Ratio 1.50x`,
-      `L5 Pathway (Depth 5)  : Ratio 1.00x (Road/Pits)`,
-      `--------------------------------`,
-      `CONTROLS:`,
-      `[SPACE] Pause/Resume | [D] Hide HUD`,
-      `[LEFT/RIGHT] Speed Up/Down`,
-      `[UP/DOWN] Look Up/Down`
+      `─── HANOI PREVIEW DEBUG ───`,
+      `Camera X   : ${Math.round(this.cameras.main.scrollX)} px`,
+      `Scroll Spd : ${this.scrollSpeed.toFixed(1)} px/f`,
+      `Status     : ${this.isPaused ? '⏸ PAUSED' : '▶ RUNNING'}`,
+      `──── Player Physics ────`,
+      `Position   : (${Math.round(this.player.x)}, ${Math.round(this.player.y)})`,
+      `Velocity Y : ${Math.round(body.velocity.y)} px/s`,
+      `On Ground  : ${body.touching.down ? '✅' : '❌'}`,
+      `Coyote     : ${this.coyoteTimeLeft > 0 ? `${Math.round(this.coyoteTimeLeft)}ms` : 'off'}`,
+      `Jump Buffer: ${this.jumpBufferTimeLeft > 0 ? `${Math.round(this.jumpBufferTimeLeft)}ms` : 'off'}`,
+      `Anim       : ${this.player.anims.currentAnim?.key ?? 'none'}`,
+      `──── Parallax Ratios ────`,
+      `L0 Sky      : 0.01x (static)`,
+      `L1 Cloud 1  : 0.05x + wind`,
+      `L2 Cloud 2  : 0.08x + wind`,
+      `L3 FG L1    : 1.40x`,
+      `L4 FG L2    : 1.60x`,
+      `─── Controls ────`,
+      `[SPACE/Click] Jump | [D] Debug`,
+      `[←/→] Speed | [↑↓] Look | [ESC] Menu`,
     ]);
+  }
+
+  private emitHudState(time: number): void {
+    const roundedScore = Math.round(this.cameras.main.scrollX);
+    const roundedTime = Math.round(time / 1000);
+    const roundedEnergy = Math.floor(Math.min(100, (this.cameras.main.scrollX / 30) % 100));
+
+    if (
+      roundedScore === this.lastScore &&
+      roundedTime === this.lastTimeElapsed &&
+      roundedEnergy === this.lastEnergy
+    ) return;
+
+    this.lastScore = roundedScore;
+    this.lastTimeElapsed = roundedTime;
+    this.lastEnergy = roundedEnergy;
+
+    this.game.events.emit('hud-update', {
+      score: roundedScore, hearts: 3,
+      energy: roundedEnergy, bossHp: 0, maxBossHp: 0,
+      phase: 'map_preview', timeElapsed: roundedTime,
+      mapKey: 'hanoi_preview', mapName: 'Hà Nội (Preview)',
+    });
   }
 }

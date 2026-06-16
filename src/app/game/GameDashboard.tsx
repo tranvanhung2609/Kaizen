@@ -45,6 +45,8 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
     mapKey: 'hanoi',
     mapName: 'Hà Nội',
     bossName: 'Boss Deadline Cổ Phố',
+    playerName: '',
+    isKaizenMode: false,
   });
 
   const [bossIntroData, setBossIntroData] = useState<any>(null);
@@ -383,6 +385,7 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
               activeSkin={activeSkin}
               activeTitle={activeTitle}
               activeGender={activeGender}
+              playerName={userDetails.email ? userDetails.email.split('@')[0] : 'Player'}
             />
 
             {/* 2. HUD Overlay */}
@@ -396,8 +399,10 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
               timeElapsed={hudState.timeElapsed}
               mapName={hudState.mapName}
               bossName={hudState.bossName}
+              playerName={hudState.playerName}
               onOpenMap={() => setIsMapModalOpen(true)}
               onOpenSkills={() => setIsSkillsModalOpen(true)}
+              isKaizenMode={hudState.isKaizenMode}
             />
 
             {/* 3. Cutscenes Overlays */}

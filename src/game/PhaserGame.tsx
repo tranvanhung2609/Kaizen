@@ -12,6 +12,7 @@ interface PhaserGameProps {
   activeSkin?: string;
   activeTitle?: string;
   activeGender?: string;
+  playerName?: string;
 }
 
 export default function PhaserGame({
@@ -23,6 +24,7 @@ export default function PhaserGame({
   activeSkin,
   activeTitle,
   activeGender,
+  playerName,
 }: PhaserGameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +53,7 @@ export default function PhaserGame({
       gameInstance.registry.set('activeSkin', activeSkin || 'skin_default');
       gameInstance.registry.set('activeTitle', activeTitle || '');
       gameInstance.registry.set('activeGender', activeGender || 'male');
+      gameInstance.registry.set('playerName', playerName || 'Player');
 
       // Register Event Listeners
       gameInstance.events.on('hud-update', (state: any) => {
@@ -100,6 +103,13 @@ export default function PhaserGame({
       gameRef.current.events.emit('gender-update', activeGender || 'male');
     }
   }, [activeSkin, activeTitle, activeGender, gameRef]);
+
+  // Synchronize playerName updates on-the-fly
+  useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.registry.set('playerName', playerName || 'Player');
+    }
+  }, [playerName, gameRef]);
 
   return (
     <div 

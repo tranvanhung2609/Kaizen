@@ -15,6 +15,8 @@ interface HUDProps {
   flasks?: number;
   onOpenMap?: () => void;
   onOpenSkills?: () => void;
+  playerName?: string;
+  isKaizenMode?: boolean;
 }
 
 const ENERGY_SEGMENTS = 10;
@@ -40,8 +42,10 @@ export default function HUD({
   flasks = 0,
   onOpenMap,
   onOpenSkills,
+  playerName,
+  isKaizenMode: isKaizenModeProp,
 }: HUDProps) {
-  const isKaizenMode = energy >= 100 || phase === 'map_clear';
+  const isKaizenMode = isKaizenModeProp !== undefined ? isKaizenModeProp : (energy >= 100 || phase === 'map_clear');
   const isBossPhase  = phase === 'boss';
   const prevHearts   = useRef(hearts);
   const [shaking, setShaking]   = useState(false);
@@ -85,30 +89,37 @@ export default function HUD({
         <header className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-navy-dark/80 backdrop-blur-md border-b border-slate-800/60 pointer-events-auto">
 
           {/* LEFT — HP Hearts */}
-          <div
-            className={`flex items-center gap-2 bg-navy-medium/70 px-3 py-1.5 rounded-xl border border-slate-700/50 ${
-              shaking ? 'animate-shake' : ''
-            }`}
-          >
-            <div className="flex items-center gap-1">
-              {[...Array(3)].map((_, i) => (
-                <svg
-                  key={i}
-                  className={`h-5 w-5 transition-all duration-300 ${
-                    i < Math.ceil(hearts)
-                      ? 'text-brand-red drop-shadow-[0_0_6px_rgba(255,59,48,0.8)] animate-pulse-slow'
-                      : 'text-slate-700 scale-90 opacity-40'
-                  }`}
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                </svg>
-              ))}
+          <div className="flex flex-col gap-1 items-start">
+            {playerName && (
+              <div className="font-display text-[9px] text-brand-cyan text-glow-cyan font-extrabold tracking-widest uppercase truncate max-w-[120px] bg-navy-medium/50 px-2 py-0.5 rounded border border-slate-700/30">
+                👤 {playerName}
+              </div>
+            )}
+            <div
+              className={`flex items-center gap-2 bg-navy-medium/70 px-3 py-1.5 rounded-xl border border-slate-700/50 ${
+                shaking ? 'animate-shake' : ''
+              }`}
+            >
+              <div className="flex items-center gap-1">
+                {[...Array(3)].map((_, i) => (
+                  <svg
+                    key={i}
+                    className={`h-5 w-5 transition-all duration-300 ${
+                      i < Math.ceil(hearts)
+                        ? 'text-brand-red drop-shadow-[0_0_6px_rgba(255,59,48,0.8)] animate-pulse-slow'
+                        : 'text-slate-700 scale-90 opacity-40'
+                    }`}
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                  </svg>
+                ))}
+              </div>
+              <span className="font-mono text-[10px] text-brand-red font-bold tracking-wider">
+                HP {Math.round((Math.max(0, Math.min(3, hearts)) / 3) * 100)}%
+              </span>
             </div>
-            <span className="font-mono text-[10px] text-brand-red font-bold tracking-wider">
-              HP {Math.round((Math.max(0, Math.min(3, hearts)) / 3) * 100)}%
-            </span>
           </div>
 
           {/* CENTER — Location + Time */}
@@ -218,7 +229,7 @@ export default function HUD({
                     isKaizenMode ? 'text-brand-red text-glow-red animate-pulse' : 'text-slate-300'
                   }`}
                 >
-                  {isKaizenMode ? '⚡ KAIZEN MODE ⚡' : 'KAIZEN ENERGY'}
+                  {isKaizenMode ? '⚡ KAIZEN AMMO ⚡' : 'KAIZEN ENERGY'}
                 </span>
               </div>
               <span
@@ -226,7 +237,7 @@ export default function HUD({
                   isKaizenMode ? 'text-brand-red animate-pulse' : 'text-brand-cyan'
                 }`}
               >
-                {Math.floor(energy)}%
+                {isKaizenMode ? `${filledSegments}/10` : `${Math.floor(energy)}%`}
               </span>
             </div>
 

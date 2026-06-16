@@ -67,10 +67,12 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('hanoi_tileset', '/assets/backgrounds/hanoi/hanoi_tileset.png');
 
     // New clean layers for the dedicated Hanoi Map Parallax scene (v2)
-    this.load.image('hanoi_bg_sky', '/assets/backgrounds/hanoi_v2/bg_sky.png');
-    this.load.image('hanoi_clouds_floating', '/assets/backgrounds/hanoi/clouds_clean.png');
+    this.load.image('hanoi_bg_sky', '/assets/backgrounds/hanoi_v2/bg_mid_city.png');
+    this.load.image('hanoi_clouds_floating', '/assets/backgrounds/hanoi_v2/clouds_floating.png');
+    this.load.image('hanoi_ground_tiles', '/assets/images/hanoi/backgrounds/ground_tiles.png');
+    this.load.image('hanoi_fg_clean_v2', '/assets/images/hanoi/backgrounds/foreground_clean.png');
     this.load.image('hanoi_bg_far_landmarks', '/assets/backgrounds/hanoi_v2/bg_far_landmarks.png');
-    this.load.image('hanoi_bg_mid_city', '/assets/backgrounds/hanoi/scenery_clean.png');
+    this.load.image('hanoi_bg_mid_city', '/assets/backgrounds/hanoi_v2/bg_mid_city.png');
     this.load.image('hanoi_fg_scenery', '/assets/backgrounds/hanoi_v2/fg_scenery.png');
     this.load.image('hanoi_road_track', '/assets/backgrounds/hanoi_v2/road_track.png');
 

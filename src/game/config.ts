@@ -11,12 +11,18 @@ export const gameConfig: Phaser.Types.Core.GameConfig = {
   height: 540,
   backgroundColor: '#111125',
   parent: 'game-canvas-container',
+  dom: {
+    createContainer: true
+  },
   physics: {
     default: 'arcade',
     arcade: {
       gravity: { x: 0, y: 0 }, // Custom gravity is configured on individual entities (e.g. Player)
-      debug: false
+      debug: process.env.NODE_ENV === 'development', // Tự tắt ở production build
+      debugShowBody: true,
+      debugShowVelocity: true
     }
   },
   scene: [BootScene, PreloadScene, MenuScene, GameScene, HanoiMapScene]
 };
+
