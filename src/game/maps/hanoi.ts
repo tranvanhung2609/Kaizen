@@ -135,7 +135,7 @@ export const hanoiMapConfig: MapConfig = {
       title: 'Vượt ải Hà Nội thành công!',
       body: 'Bạn đã hoàn thành chặng đường Khởi nguồn. Trải qua chặng đường đầu tiên, tinh thần Tôn Trọng của VTIans luôn là kim chỉ nam trong việc phát triển và bàn giao dự án.',
       durationMs: 5000,
-      imageAsset: 'player_male.png'
+      imageAsset: 'player_male_stand.png'
     }
   }
 };

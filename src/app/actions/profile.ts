@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache';
 
 export async function updateProfile(data: {
   fullName?: string;
+  department?: string;
 }) {
   // Enforce authentication
   const user = await requireAuth();
@@ -16,6 +17,7 @@ export async function updateProfile(data: {
     const updateData: Partial<typeof profiles.$inferInsert> = {};
 
     if (data.fullName !== undefined) updateData.fullName = data.fullName.trim();
+    if (data.department !== undefined) updateData.department = data.department.trim();
 
     // Perform database update
     await db
@@ -26,6 +28,7 @@ export async function updateProfile(data: {
     // Revalidate paths to refresh cached UI
     revalidatePath('/game');
     revalidatePath('/leaderboard');
+    revalidatePath('/admin');
 
     return { success: true };
   } catch (error: any) {

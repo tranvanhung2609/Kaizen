@@ -99,7 +99,7 @@ export default class HanoiMapScene extends Phaser.Scene {
     this.generatePathway(width + 500);
 
     // ── 7. Player Mascot Preview (depth 5) ────────────────────────────────
-    this.player = this.physics.add.sprite(150, 300, 'mascot_male');
+    this.player = this.physics.add.sprite(150, 300, 'mascot_male_run');
     this.player.setGravityY(RUNNER_PHYSICS.gravity);
     this.player.setCollideWorldBounds(false); // Không giới hạn world bounds — scene cuộn
     this.player.setScale(0.6).setDepth(5);
@@ -270,7 +270,7 @@ export default class HanoiMapScene extends Phaser.Scene {
       const block = this.pathwayGroup.create(
         this.nextPlatformX + platformWidth / 2,
         this.groundY + 20,
-        'hanoi_tileset'
+        'hanoi_ground_tiles'
       );
       block.setDisplaySize(platformWidth, 40).setAlpha(0);
       block.body.updateFromGameObject();

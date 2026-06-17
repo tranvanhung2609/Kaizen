@@ -59,7 +59,7 @@ export class SpawnSystem {
           block.tilePositionX = this.nextGroundX * 8;
           block.setDepth(5);
         } else {
-          const block = this.groups.ground.create(this.nextGroundX + 32, GROUND_Y, 'hanoi_tileset');
+          const block = this.groups.ground.create(this.nextGroundX + 32, GROUND_Y, 'hanoi_ground_tiles');
           block.setDisplaySize(64, 40);
           block.setAlpha(0); // khối vô hình
           block.body.updateFromGameObject();
@@ -103,34 +103,36 @@ export class SpawnSystem {
           break;
         }
         case 'respect_shield': {
-          const p = this.groups.powerups.create(spawnX, spawnY, 'powerups');
-          p.setFrame(0).setDisplaySize(24, 24).setData('kind', 'respect'); // Scaled down
+          const p = this.groups.powerups.create(spawnX, spawnY, 'respect_shield');
+          p.setDisplaySize(24, 24).setData('kind', 'respect'); // Scaled down
           p.body.updateFromGameObject();
           break;
         }
         case 'responsibility_wings': {
-          const p = this.groups.powerups.create(spawnX, spawnY, 'powerups');
-          p.setFrame(1).setDisplaySize(24, 24).setData('kind', 'wings'); // Scaled down
+          const p = this.groups.powerups.create(spawnX, spawnY, 'responsibility_wings');
+          p.setDisplaySize(24, 24).setData('kind', 'wings'); // Scaled down
           p.body.updateFromGameObject();
           break;
         }
         case 'kaizen_keyboard': {
-          const p = this.groups.powerups.create(spawnX, spawnY, 'powerups');
-          p.setFrame(2).setDisplaySize(24, 24).setData('kind', 'keyboard'); // Scaled down
+          const p = this.groups.powerups.create(spawnX, spawnY, 'kaizen_keyboard');
+          p.setDisplaySize(24, 24).setData('kind', 'keyboard'); // Scaled down
           p.body.updateFromGameObject();
           break;
         }
         case 'ground_bug': {
-          const bug = this.groups.enemies.create(spawnX, spawnY, 'hanoi_enemies');
-          bug.setScale(0.6).play('bug_staging_crawl').setData('kind', 'ground_bug'); // Scaled down
+          const bug = this.groups.enemies.create(spawnX, spawnY, 'bug1_enemies');
+          bug.setScale(0.2).play('bug_staging_crawl').setData('kind', 'ground_bug'); // Scaled down
+          bug.body.updateFromGameObject();
           bug.body.setGravityY(500);
           if (mapConfig.mapKey === 'tokyo') bug.setTint(0xff66cc);
           else if (mapConfig.mapKey === 'danang') bug.setTint(0x33ffff);
           break;
         }
         case 'flying_bug': {
-          const bug = this.groups.enemies.create(spawnX, spawnY, 'hanoi_enemies');
-          bug.setScale(0.6).play('bug_prod_fly').setData('kind', 'flying_bug'); // Scaled down
+          const bug = this.groups.enemies.create(spawnX, spawnY, 'bug2_enemies');
+          bug.setScale(0.2).play('bug_prod_fly').setData('kind', 'flying_bug'); // Scaled down
+          bug.body.updateFromGameObject();
           bug.body.setAllowGravity(false);
           if (mapConfig.mapKey === 'tokyo') bug.setTint(0xff33cc);
           else if (mapConfig.mapKey === 'danang') bug.setTint(0x00cccc);
@@ -150,8 +152,8 @@ export class SpawnSystem {
           break;
         }
         case 'bomb': {
-          const bomb = this.groups.obstacles.create(spawnX, spawnY, 'obstacles');
-          bomb.setFrame(1).setDisplaySize(24, 24); // Scaled down
+          const bomb = this.groups.obstacles.create(spawnX, spawnY, 'tech_debt_bomb');
+          bomb.setDisplaySize(24, 24); // Scaled down
           bomb.body.updateFromGameObject();
           break;
         }
@@ -161,7 +163,7 @@ export class SpawnSystem {
           const platform = this.groups.ground.create(
             spawnX + platformW / 2,
             spawnY + platformH / 2,
-            'hanoi_tileset'
+            'hanoi_ground_tiles'
           );
           platform.setDisplaySize(platformW, platformH);
           platform.body.updateFromGameObject();

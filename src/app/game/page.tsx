@@ -4,6 +4,7 @@ import { profiles, journeyScores } from '@/db/schema';
 import { eq, desc, ne } from 'drizzle-orm';
 import Navbar from '@/components/Navbar';
 import GameClientWrapper from './GameClientWrapper';
+import { extractDeptFromName } from '@/lib/profile';
 
 export default async function GamePage() {
   // Guard the page and get the authenticated VTI user
@@ -41,7 +42,7 @@ export default async function GamePage() {
         avatarUrl: profile.avatarUrl || '',
         role: profile.role || 'user',
       };
-      department = profile.department;
+      department = profile.department || extractDeptFromName(profile.fullName);
     }
   } catch (err) {
     console.error('Failed to load profile from DB, falling back:', err);
@@ -68,7 +69,7 @@ export default async function GamePage() {
     topPlayers = records.map((r, idx) => ({
       rank: idx + 1,
       name: r.fullName || r.email.split('@')[0],
-      dept: r.department || 'VTI',
+      dept: r.department || extractDeptFromName(r.fullName) || 'VTI',
       score: r.totalScore,
       avatar: r.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${r.id}`,
     }));

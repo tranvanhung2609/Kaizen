@@ -71,12 +71,13 @@ export class ParallaxSystem {
 
       // ── LAYER 4: Ground / Pavement ──────────────────────────────────────────
       const groundLayerY = 350;
-      const groundBgSprite = scene.add.tileSprite(0, groundLayerY, width, height - groundLayerY, 'hanoi_road_track')
+      const roadTexture = mapConfig.mapKey === 'tokyo' ? 'tokyo_road_track' : 'danang_road_track';
+      const groundBgSprite = scene.add.tileSprite(0, groundLayerY, width, height - groundLayerY, roadTexture)
         .setOrigin(0, 0).setScrollFactor(0).setDepth(4);
       this.layers.push({ sprite: groundBgSprite, scrollFactorX: 1.0 });
 
       // ── LAYER 5: Foreground Scenery (in front of player, depth 6) ───────────
-      const fgSprite = scene.add.tileSprite(0, 0, width, height, 'hanoi_fg_scenery')
+      const fgSprite = scene.add.tileSprite(0, 0, width, height, 'hanoi_fg_clean_v2')
         .setOrigin(0, 0).setScrollFactor(0).setDepth(6).setTileScale(scale, scale);
       this.layers.push({ sprite: fgSprite, scrollFactorX: 1.5 });
 

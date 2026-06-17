@@ -61,10 +61,8 @@ export default class PreloadScene extends Phaser.Scene {
     // 2. Load Visual Assets (downloaded from Stitch)
     this.load.image('bg_sky', '/assets/backgrounds/sky_clean.png');
     this.load.image('bg_mid', '/assets/backgrounds/scenery_clean.png');
-    this.load.image('bg_ground', '/assets/backgrounds/pathway_clean.png');
     // Full atlas kept for ground block fallback usage
     this.load.image('hanoi_parallax', '/assets/backgrounds/scenery_clean.png');
-    this.load.image('hanoi_tileset', '/assets/backgrounds/hanoi_tileset.png');
 
     // New clean layers for the dedicated Hanoi Map Parallax scene (v2)
     this.load.image('hanoi_bg_sky', '/assets/backgrounds/bg_mid_city.png');
@@ -73,39 +71,53 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('hanoi_fg_clean_v2', '/assets/backgrounds/foreground_clean.png');
     this.load.image('hanoi_bg_far_landmarks', '/assets/backgrounds/bg_far_landmarks.png');
     this.load.image('hanoi_bg_mid_city', '/assets/backgrounds/bg_mid_city.png');
-    this.load.image('hanoi_fg_scenery', '/assets/backgrounds/fg_scenery.png');
-    this.load.image('hanoi_road_track', '/assets/backgrounds/road_track.png');
+    this.load.image('tokyo_road_track', '/assets/backgrounds/road1_track.png');
+    this.load.image('danang_road_track', '/assets/backgrounds/road2_track.png');
 
     // UI assets
     this.load.image('heart', '/assets/ui/heart.png');
 
-    // Mascot spritesheets (170x204px frame cells inside a 1024x1024px grid)
-    this.load.spritesheet('mascot_male', '/assets/characters/player_male.png', {
-      frameWidth: 170,
-      frameHeight: 204
-    });
-    this.load.spritesheet('mascot_female', '/assets/characters/player_female.png', {
-      frameWidth: 170,
-      frameHeight: 204
-    });
-
-    // Enemies spritesheet (48x48px frame cells inside a 1024x1024px grid)
-    this.load.spritesheet('hanoi_enemies', '/assets/characters/hanoi_enemies.png', {
-      frameWidth: 48,
-      frameHeight: 48
+    // Mascot individual spritesheets (170x204px frame cells)
+    const genders = ['male', 'female'];
+    const actions = ['stand', 'run', 'slip', 'fly', 'beaten'];
+    genders.forEach(gender => {
+      actions.forEach(action => {
+        this.load.spritesheet(
+          `mascot_${gender}_${action}`,
+          `/assets/characters/player_${gender}_${action}.png`,
+          { frameWidth: 170, frameHeight: 204 }
+        );
+      });
     });
 
-    // Power-ups sheet (512x512px frame cells inside a 1024x1024px grid)
-    this.load.spritesheet('powerups', '/assets/items/powerups.png', {
-      frameWidth: 512,
-      frameHeight: 512
+    // Ground enemies (239x210px frame cells, 2 frames total)
+    this.load.spritesheet('bug1_enemies', '/assets/characters/bug1_enemies.png', {
+      frameWidth: 239,
+      frameHeight: 210
     });
 
-    // Obstacles sheet (512x512px frame cells inside a 1024x1024px grid)
-    this.load.spritesheet('obstacles', '/assets/items/hanoi_obstacles.png', {
-      frameWidth: 512,
-      frameHeight: 512
+    // Flying enemies (233x238px frame cells, 3 frames total)
+    this.load.spritesheet('bug2_enemies', '/assets/characters/bug2_enemies.png', {
+      frameWidth: 233,
+      frameHeight: 238
     });
+
+    // Enemies death/defeat (231x225px frame cells, 2 frames total)
+    this.load.spritesheet('bug1_died_enemies', '/assets/characters/bug1_died_enemies.png', {
+      frameWidth: 231,
+      frameHeight: 225
+    });
+
+    // Power-ups loaded as single images
+    this.load.image('respect_shield', '/assets/items/shield.png');
+    this.load.image('responsibility_wings', '/assets/items/wing.png');
+    this.load.image('kaizen_keyboard', '/assets/items/keyboard.png');
+
+    // Boss bullets / electrical voltage
+    this.load.image('security_voltage', '/assets/items/security_voltage.png');
+
+    // Obstacle (Bomb) loaded as single image
+    this.load.image('tech_debt_bomb', '/assets/items/tech_debt_boms.png');
 
     // Boss spritesheet (192x192px frame cells inside a 1024x1024px grid)
     this.load.spritesheet('hanoi_boss', '/assets/characters/hanoi_boss.png', {
@@ -136,21 +148,12 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   private createMascotAnimations() {
-    // 6-column grid mapping:
-    // Row 1 (frames 0-5): Idle
-    // Row 2 (frames 6-11): Run
-    // Row 3 (frames 12-17): Jump / slide (12 = crouch, 13-15 = jump, 16 = slide)
-    // Row 4 (frames 18-23): Fly (20-21 = flying with wings)
-    // Row 5 (frames 24-29): Hit (24-26 = hit/damage)
-    
     const genders = ['male', 'female'];
 
     genders.forEach(gender => {
-      const textureKey = `mascot_${gender}`;
-
       this.anims.create({
         key: `${gender}_idle`,
-        frames: this.anims.generateFrameNumbers(textureKey, {
+        frames: this.anims.generateFrameNumbers(`mascot_${gender}_stand`, {
           start: 0,
           end: 5
         }),
@@ -160,9 +163,9 @@ export default class PreloadScene extends Phaser.Scene {
 
       this.anims.create({
         key: `${gender}_run`,
-        frames: this.anims.generateFrameNumbers(textureKey, {
-          start: 6,
-          end: 11
+        frames: this.anims.generateFrameNumbers(`mascot_${gender}_run`, {
+          start: 0,
+          end: 5
         }),
         frameRate: 14,
         repeat: -1
@@ -170,9 +173,9 @@ export default class PreloadScene extends Phaser.Scene {
 
       this.anims.create({
         key: `${gender}_jump`,
-        frames: this.anims.generateFrameNumbers(textureKey, {
-          start: 13,
-          end: 15
+        frames: this.anims.generateFrameNumbers(`mascot_${gender}_slip`, {
+          start: 1,
+          end: 3
         }),
         frameRate: 10,
         repeat: 0
@@ -180,9 +183,9 @@ export default class PreloadScene extends Phaser.Scene {
 
       this.anims.create({
         key: `${gender}_crouch`,
-        frames: this.anims.generateFrameNumbers(textureKey, {
-          start: 12,
-          end: 12
+        frames: this.anims.generateFrameNumbers(`mascot_${gender}_slip`, {
+          start: 0,
+          end: 0
         }),
         frameRate: 10,
         repeat: -1
@@ -190,9 +193,9 @@ export default class PreloadScene extends Phaser.Scene {
 
       this.anims.create({
         key: `${gender}_fly`,
-        frames: this.anims.generateFrameNumbers(textureKey, {
-          start: 20,
-          end: 21
+        frames: this.anims.generateFrameNumbers(`mascot_${gender}_fly`, {
+          start: 2,
+          end: 3
         }),
         frameRate: 10,
         repeat: -1
@@ -200,9 +203,9 @@ export default class PreloadScene extends Phaser.Scene {
 
       this.anims.create({
         key: `${gender}_hit`,
-        frames: this.anims.generateFrameNumbers(textureKey, {
-          start: 24,
-          end: 26
+        frames: this.anims.generateFrameNumbers(`mascot_${gender}_beaten`, {
+          start: 0,
+          end: 2
         }),
         frameRate: 10,
         repeat: 0
@@ -211,39 +214,33 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   private createEnemyAnimations() {
-    // Row 1 (Index 0-20): Bug Staging crawl cycle (4 frames, mechanical leg movement) -> frame size 48
-    // Row 2 (Index 21-41): Bug Prod fly cycle (4 frames, purple digital wings flapping)
-    // Row 3 (Index 42-62): Bug Prod shooting cycle (4 frames)
-    // Row 4 (Index 63-83): Death/Defeat animation (3 frames)
-    const framesPerRow = 21; // Since 1024 / 48 = 21.3, so 21 frames per row
-
     this.anims.create({
       key: 'bug_staging_crawl',
-      frames: this.anims.generateFrameNumbers('hanoi_enemies', {
+      frames: this.anims.generateFrameNumbers('bug1_enemies', {
         start: 0,
-        end: 3
+        end: 1
+      }),
+      frameRate: 6,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'bug_prod_fly',
+      frames: this.anims.generateFrameNumbers('bug2_enemies', {
+        start: 0,
+        end: 2
       }),
       frameRate: 8,
       repeat: -1
     });
 
     this.anims.create({
-      key: 'bug_prod_fly',
-      frames: this.anims.generateFrameNumbers('hanoi_enemies', {
-        start: framesPerRow,
-        end: framesPerRow + 3
-      }),
-      frameRate: 10,
-      repeat: -1
-    });
-
-    this.anims.create({
       key: 'bug_death',
-      frames: this.anims.generateFrameNumbers('hanoi_enemies', {
-        start: framesPerRow * 3,
-        end: framesPerRow * 3 + 2
+      frames: this.anims.generateFrameNumbers('bug1_died_enemies', {
+        start: 0,
+        end: 1
       }),
-      frameRate: 12,
+      frameRate: 8,
       repeat: 0
     });
   }

@@ -139,9 +139,9 @@ export class BossSystem {
     const bullet = this.bossProjectiles.create(
       this.sprite.x - 30, // Offset adjusted for smaller scale
       this.sprite.y - 10, // Offset adjusted for smaller scale
-      'powerups'
+      'security_voltage'
     );
-    bullet.setFrame(0).setDisplaySize(12, 12).setTint(0xff3b30); // Scaled down
+    bullet.setDisplaySize(16, 16).setTint(0xff3b30); // Scaled down
 
     const angle = Phaser.Math.Angle.Between(bullet.x, bullet.y, playerX, playerY);
     const speed = mapConfig.bossConfig.bulletSpeed;

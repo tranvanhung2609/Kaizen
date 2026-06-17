@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { resetUserScoreAction, updateUserScoreAction } from '@/app/actions/admin';
+import { extractDeptFromName } from '@/lib/profile';
 
 interface UserScore {
   id: string;
@@ -191,7 +192,7 @@ export default function AdminScoreManager({ initialUserScores }: AdminScoreManag
                     {/* Department */}
                     <td className="py-3.5 px-6 text-center">
                       <span className="font-mono bg-slate-800/50 px-2 py-0.5 rounded border border-slate-700/40 text-slate-400">
-                        {user.department || 'VTI'}
+                        {user.department || extractDeptFromName(user.fullName) || 'VTI'}
                       </span>
                     </td>
 

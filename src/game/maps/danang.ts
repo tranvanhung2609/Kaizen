@@ -135,7 +135,7 @@ export const danangMapConfig: MapConfig = {
       title: 'Hoàn thành hành trình VTI!',
       body: 'Bạn đã xuất sắc chinh phục tất cả 3 chặng đường Hà Nội - Tokyo - Đà Nẵng. Hãy cùng tự hào về hành trình 9 năm Công nghệ kiến tạo giá trị mới!',
       durationMs: 6000,
-      imageAsset: 'player_male.png'
+      imageAsset: 'player_male_stand.png'
     }
   }
 };

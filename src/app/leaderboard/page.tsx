@@ -4,6 +4,7 @@ import { journeyScores, profiles, mapRuns } from '@/db/schema';
 import { desc, eq, sql, ne, and } from 'drizzle-orm';
 import Navbar from '@/components/Navbar';
 import LeaderboardClient from '@/components/leaderboard/LeaderboardClient';
+import { extractDeptFromName } from '@/lib/profile';
 
 export const revalidate = 0;
 
@@ -86,7 +87,7 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
         fullName: profile.fullName || '', avatarUrl: profile.avatarUrl || '',
         role: profile.role || 'user',
       };
-      myDept = profile.department || '';
+      myDept = profile.department || extractDeptFromName(profile.fullName) || '';
     }
   } catch (err) {
     console.error('[Leaderboard] profile load error:', err);
@@ -154,7 +155,9 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
         .where(
           and(
             ne(profiles.role, 'admin'),
-            myDept ? eq(profiles.department, myDept) : sql`1=1`
+            myDept 
+              ? sql`(${profiles.department} = ${myDept} OR (${profiles.department} = '' AND ${profiles.fullName} LIKE ${'%(' + myDept + ')'}))`
+              : sql`1=1`
           )
         )
         .orderBy(
@@ -170,7 +173,7 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
         userId: r.id,
         name: r.fullName || r.email.split('@')[0],
         avatar: r.avatarUrl || `https://api.dicebear.com/7.x/adventurer/svg?seed=${r.id}`,
-        department: r.department || myDept,
+        department: r.department || extractDeptFromName(r.fullName) || myDept,
         hanoiScore:  Number(r.hanoiBestScore),
         tokyoScore:  Number(r.tokyoBestScore),
         danangScore: Number(r.danangBestScore),
@@ -187,6 +190,7 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
       const records = await db
         .select({
           id: profiles.id,
+          fullName: profiles.fullName,
           department: profiles.department,
           totalScore:      sql<number>`COALESCE(${journeyScores.totalScore}, 0)`,
           hanoiBestScore:  sql<number>`COALESCE(${journeyScores.hanoiBestScore}, 0)`,
@@ -206,7 +210,7 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
       }> = {};
 
       for (const r of records) {
-        const key = r.department || 'Chưa cập nhật';
+        const key = r.department || extractDeptFromName(r.fullName) || 'Chưa cập nhật';
         if (!deptMap[key]) {
           deptMap[key] = { count: 0, playedCount: 0, totalSum: 0,
                            hanoiBest: 0, tokyoBest: 0, danangBest: 0, maxTotal: 0 };

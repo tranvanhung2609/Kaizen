@@ -67,7 +67,7 @@ export class PlayerSystem {
     this.onHudEmit = onHudEmit;
 
     // ── Spawn Player Sprite ────────────────────────────────────────────────
-    this.sprite = scene.physics.add.sprite(-50, 200, `mascot_${state.activeGender}`);
+    this.sprite = scene.physics.add.sprite(-50, 200, `mascot_${state.activeGender}_run`);
     this.sprite.setCollideWorldBounds(true);
     this.sprite.setGravityY(800); // Rule 1: gravity.y = 800
     this.sprite.setBounce(0.1);  // Rule 1: bounce(0.1)
@@ -290,8 +290,8 @@ export class PlayerSystem {
   private shoot(time: number): void {
     this.audio.playShoot();
     this.state.nextShootTime = time + RUNNER_PHYSICS.shootCooldown;
-    const proj = this.projectiles.create(this.sprite.x + 30, this.sprite.y, 'powerups');
-    proj.setFrame(2).setDisplaySize(12, 12).setVelocityX(800);
+    const proj = this.projectiles.create(this.sprite.x + 30, this.sprite.y, 'kaizen_keyboard');
+    proj.setDisplaySize(24, 10).setVelocityX(800);
     proj.body.updateFromGameObject();
 
     if (this.state.isKaizenMode) {

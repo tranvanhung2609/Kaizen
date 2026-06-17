@@ -632,7 +632,7 @@ export default class GameScene extends Phaser.Scene {
     };
     const onGenderUpdate = (gender: string) => {
       this.state.activeGender = gender;
-      this.playerSys.sprite.setTexture(`mascot_${gender}`);
+      this.playerSys.sprite.setTexture(`mascot_${gender}_run`);
       const parts = this.playerSys.sprite.anims.currentAnim?.key?.split('_') ?? [];
       const stateName = parts[parts.length - 1] || 'run';
       this.playerSys.sprite.play(`${gender}_${stateName}`, true);

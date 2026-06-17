@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { updateProfile } from '@/app/actions/profile';
+import { extractDeptFromName } from '@/lib/profile';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -9,6 +11,7 @@ interface ProfileModalProps {
   initialProfile: {
     fullName?: string;
     email?: string;
+    department?: string;
   };
 }
 
@@ -17,7 +20,14 @@ export default function ProfileModal({
   onClose,
   initialProfile,
 }: ProfileModalProps) {
+  const router = useRouter();
   const [fullName, setFullName] = useState(initialProfile.fullName || '');
+  
+  // Khởi tạo phòng ban lấy từ database hoặc trích xuất tự động từ tên
+  const [department, setDepartment] = useState(() => {
+    return initialProfile.department || extractDeptFromName(initialProfile.fullName) || '';
+  });
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,12 +46,21 @@ export default function ProfileModal({
       return;
     }
 
+    const trimmedDepartment = department.trim();
+    if (!trimmedDepartment) {
+      setError('Vui lòng điền Phòng ban / Bộ phận.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await updateProfile({
         fullName: trimmedFullName,
+        department: trimmedDepartment,
       });
 
       if (res.success) {
+        router.refresh();
         onClose();
       } else {
         setError(res.error || 'Có lỗi xảy ra.');
@@ -111,6 +130,21 @@ export default function ProfileModal({
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="VD: Nguyễn Văn A"
+              className="w-full px-4 py-2.5 rounded-xl bg-navy-dark border border-brand-cyan/40 text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/30 transition-colors"
+            />
+          </div>
+
+          {/* Department */}
+          <div>
+            <label className="block text-[11px] font-bold text-brand-cyan uppercase tracking-widest font-mono mb-1">
+              Phòng ban / Bộ phận *
+            </label>
+            <input
+              type="text"
+              required
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              placeholder="VD: VTI.D5, QA, Marketing..."
               className="w-full px-4 py-2.5 rounded-xl bg-navy-dark border border-brand-cyan/40 text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/30 transition-colors"
             />
           </div>

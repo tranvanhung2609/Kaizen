@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { profiles, journeyScores } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
+import { extractDeptFromName } from '@/lib/profile';
 
 export const revalidate = 0; // Dynamic rendering
 
@@ -43,7 +44,7 @@ export default async function AdminPage() {
         avatarUrl: profile.avatarUrl || '',
         role: profile.role || 'user',
       };
-      department = profile.department;
+      department = profile.department || extractDeptFromName(profile.fullName);
     }
   } catch (err) {
     console.error('Failed to load profile for admin page checking:', err);
@@ -57,7 +58,7 @@ export default async function AdminPage() {
   // Fetch all user scores & profiles (including admins so we can manage all accounts, but mostly normal users)
   let userScores: any[] = [];
   try {
-    userScores = await db
+    const records = await db
       .select({
         id: profiles.id,
         email: profiles.email,
@@ -72,6 +73,11 @@ export default async function AdminPage() {
       .from(profiles)
       .leftJoin(journeyScores, eq(profiles.id, journeyScores.userId))
       .orderBy(desc(journeyScores.totalScore));
+
+    userScores = records.map((u) => ({
+      ...u,
+      department: u.department || extractDeptFromName(u.fullName) || '',
+    }));
   } catch (err) {
     console.error('Failed to query user scores for admin panel:', err);
   }

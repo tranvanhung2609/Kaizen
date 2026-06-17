@@ -135,7 +135,7 @@ export const tokyoMapConfig: MapConfig = {
       title: 'Chinh phục Tokyo thành công!',
       body: 'Bạn đã xuất sắc vượt qua chặng Tokyo. Với tinh thần Kaizen liên tục học hỏi, VTIans đã khẳng định được thương hiệu tại đất nước mặt trời mọc.',
       durationMs: 5000,
-      imageAsset: 'player_male.png'
+      imageAsset: 'player_male_stand.png'
     }
   }
 };

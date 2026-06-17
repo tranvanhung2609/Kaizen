@@ -135,6 +135,7 @@ export default function Navbar({ user, department = '', compact = false }: Navba
         initialProfile={{
           fullName: user.fullName,
           email: user.email,
+          department: department,
         }}
       />
     </>

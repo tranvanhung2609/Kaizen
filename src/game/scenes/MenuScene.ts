@@ -38,16 +38,16 @@ export default class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5);
     subTitleText.setShadow(0, 0, '#ff3b30', 8, true, true);
 
-    // Dynamic mascot running on menu background
+    // Dynamic mascot standing on menu background
     const activeGender = this.registry.get('activeGender') || 'male';
-    const runnerSprite = this.add.sprite(width / 2, 280, `mascot_${activeGender}`)
+    const runnerSprite = this.add.sprite(width / 2, 280, `mascot_${activeGender}_stand`)
       .setScale(1.5)
-      .play(`${activeGender}_run`);
+      .play(`${activeGender}_idle`);
 
     // Listen to on-the-fly gender updates
     const onGenderUpdate = (gender: string) => {
-      runnerSprite.setTexture(`mascot_${gender}`);
-      runnerSprite.play(`${gender}_run`, true);
+      runnerSprite.setTexture(`mascot_${gender}_stand`);
+      runnerSprite.play(`${gender}_idle`, true);
     };
     this.game.events.on('gender-update', onGenderUpdate);
 
