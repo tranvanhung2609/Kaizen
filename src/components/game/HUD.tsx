@@ -201,7 +201,7 @@ export default function HUD({
               <img
                 alt="XP Flask"
                 className="w-6 h-6 object-contain relative z-10 drop-shadow-[0_0_6px_rgba(0,229,255,0.5)]"
-                src="/assets/sprites/items/xp_flask.png"
+                src="/assets/items/xp_flask.png"
               />
             </div>
             <div className="flex flex-col leading-tight">

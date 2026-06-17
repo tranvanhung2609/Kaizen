@@ -59,62 +59,62 @@ export default class PreloadScene extends Phaser.Scene {
     });
 
     // 2. Load Visual Assets (downloaded from Stitch)
-    this.load.image('bg_sky', '/assets/backgrounds/hanoi/sky_clean.png');
-    this.load.image('bg_mid', '/assets/backgrounds/hanoi/scenery_clean.png');
-    this.load.image('bg_ground', '/assets/backgrounds/hanoi/pathway_clean.png');
+    this.load.image('bg_sky', '/assets/backgrounds/sky_clean.png');
+    this.load.image('bg_mid', '/assets/backgrounds/scenery_clean.png');
+    this.load.image('bg_ground', '/assets/backgrounds/pathway_clean.png');
     // Full atlas kept for ground block fallback usage
-    this.load.image('hanoi_parallax', '/assets/backgrounds/hanoi/scenery_clean.png');
-    this.load.image('hanoi_tileset', '/assets/backgrounds/hanoi/hanoi_tileset.png');
+    this.load.image('hanoi_parallax', '/assets/backgrounds/scenery_clean.png');
+    this.load.image('hanoi_tileset', '/assets/backgrounds/hanoi_tileset.png');
 
     // New clean layers for the dedicated Hanoi Map Parallax scene (v2)
-    this.load.image('hanoi_bg_sky', '/assets/backgrounds/hanoi_v2/bg_mid_city.png');
-    this.load.image('hanoi_clouds_floating', '/assets/backgrounds/hanoi_v2/clouds_floating.png');
-    this.load.image('hanoi_ground_tiles', '/assets/images/hanoi/backgrounds/ground_tiles.png');
-    this.load.image('hanoi_fg_clean_v2', '/assets/images/hanoi/backgrounds/foreground_clean.png');
-    this.load.image('hanoi_bg_far_landmarks', '/assets/backgrounds/hanoi_v2/bg_far_landmarks.png');
-    this.load.image('hanoi_bg_mid_city', '/assets/backgrounds/hanoi_v2/bg_mid_city.png');
-    this.load.image('hanoi_fg_scenery', '/assets/backgrounds/hanoi_v2/fg_scenery.png');
-    this.load.image('hanoi_road_track', '/assets/backgrounds/hanoi_v2/road_track.png');
+    this.load.image('hanoi_bg_sky', '/assets/backgrounds/bg_mid_city.png');
+    this.load.image('hanoi_clouds_floating', '/assets/backgrounds/clouds_floating.png');
+    this.load.image('hanoi_ground_tiles', '/assets/backgrounds/ground_tiles.png');
+    this.load.image('hanoi_fg_clean_v2', '/assets/backgrounds/foreground_clean.png');
+    this.load.image('hanoi_bg_far_landmarks', '/assets/backgrounds/bg_far_landmarks.png');
+    this.load.image('hanoi_bg_mid_city', '/assets/backgrounds/bg_mid_city.png');
+    this.load.image('hanoi_fg_scenery', '/assets/backgrounds/fg_scenery.png');
+    this.load.image('hanoi_road_track', '/assets/backgrounds/road_track.png');
 
     // UI assets
     this.load.image('heart', '/assets/ui/heart.png');
 
     // Mascot spritesheets (170x204px frame cells inside a 1024x1024px grid)
-    this.load.spritesheet('mascot_male', '/assets/sprites/mascot/player_male.png', {
+    this.load.spritesheet('mascot_male', '/assets/characters/player_male.png', {
       frameWidth: 170,
       frameHeight: 204
     });
-    this.load.spritesheet('mascot_female', '/assets/sprites/mascot/player_female.png', {
+    this.load.spritesheet('mascot_female', '/assets/characters/player_female.png', {
       frameWidth: 170,
       frameHeight: 204
     });
 
     // Enemies spritesheet (48x48px frame cells inside a 1024x1024px grid)
-    this.load.spritesheet('hanoi_enemies', '/assets/sprites/enemies/hanoi_enemies.png', {
+    this.load.spritesheet('hanoi_enemies', '/assets/characters/hanoi_enemies.png', {
       frameWidth: 48,
       frameHeight: 48
     });
 
     // Power-ups sheet (512x512px frame cells inside a 1024x1024px grid)
-    this.load.spritesheet('powerups', '/assets/sprites/items/powerups.png', {
+    this.load.spritesheet('powerups', '/assets/items/powerups.png', {
       frameWidth: 512,
       frameHeight: 512
     });
 
     // Obstacles sheet (512x512px frame cells inside a 1024x1024px grid)
-    this.load.spritesheet('obstacles', '/assets/sprites/traps/fa1dce0b5b444747ac466757343167bc.png', {
+    this.load.spritesheet('obstacles', '/assets/items/hanoi_obstacles.png', {
       frameWidth: 512,
       frameHeight: 512
     });
 
     // Boss spritesheet (192x192px frame cells inside a 1024x1024px grid)
-    this.load.spritesheet('hanoi_boss', '/assets/sprites/bosses/hanoi_boss.png', {
+    this.load.spritesheet('hanoi_boss', '/assets/characters/hanoi_boss.png', {
       frameWidth: 192,
       frameHeight: 192
     });
 
     // Experience flask (512x512px single icon)
-    this.load.image('xp_flask', '/assets/sprites/items/xp_flask.png');
+    this.load.image('xp_flask', '/assets/items/xp_flask.png');
 
     // Fallback: If some folders fail, load placeholders
     // (Our download script has finished, so assets are ready)

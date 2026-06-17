@@ -129,13 +129,13 @@ export const tokyoMapConfig: MapConfig = {
       title: 'Thử thách Nhật Bản!',
       body: 'Boss Kaizen Breaker thách thức năng lực học hỏi của bạn. Hãy kích hoạt Kaizen Mode để phá vỡ các rào cản ngôn ngữ và quy trình phức tạp!',
       durationMs: 4500,
-      imageAsset: 'bosses/hanoi_boss.png' // Reuses boss texture (tinted in scene)
+      imageAsset: 'hanoi_boss.png' // Reuses boss texture (tinted in scene)
     },
     mapClear: {
       title: 'Chinh phục Tokyo thành công!',
       body: 'Bạn đã xuất sắc vượt qua chặng Tokyo. Với tinh thần Kaizen liên tục học hỏi, VTIans đã khẳng định được thương hiệu tại đất nước mặt trời mọc.',
       durationMs: 5000,
-      imageAsset: 'mascot/hanoi_spritesheet.png'
+      imageAsset: 'player_male.png'
     }
   }
 };

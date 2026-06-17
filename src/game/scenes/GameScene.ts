@@ -1,18 +1,18 @@
 import Phaser from 'phaser';
-import { MapKey } from '../constants';
+import { MapKey } from '../engine/constants';
 import { hanoiMapConfig } from '../maps/hanoi';
 import { tokyoMapConfig } from '../maps/tokyo';
 import { danangMapConfig } from '../maps/danang';
 import { MapConfig } from '../maps/MapConfig';
 
 // Systems
-import { GameState, createInitialGameState } from '../systems/GameState';
-import { AudioSynth } from '../systems/AudioSynth';
-import { ParallaxSystem } from '../systems/ParallaxSystem';
-import { SpawnSystem } from '../systems/SpawnSystem';
-import { PlayerSystem } from '../systems/PlayerSystem';
-import { BossSystem } from '../systems/BossSystem';
-import { HudSystem } from '../systems/HudSystem';
+import { GameState, createInitialGameState } from '../engine/GameState';
+import { AudioSynth } from '../engine/AudioSynth';
+import { ParallaxSystem } from '../maps/ParallaxSystem';
+import { SpawnSystem } from '../maps/SpawnSystem';
+import { PlayerSystem } from '../entities/PlayerSystem';
+import { BossSystem } from '../entities/BossSystem';
+import { HudSystem } from '../engine/HudSystem';
 
 // ─── GameScene (Coordinator) ──────────────────────────────────────────────────
 // Scene này KHÔNG chứa game logic. Nó chỉ:

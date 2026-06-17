@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { RUNNER_PHYSICS } from '../constants';
+import { RUNNER_PHYSICS } from '../engine/constants';
 
 // ─── HanoiMapScene ─────────────────────────────────────────────────────────────
 // Scene preview / debug tool để kiểm tra parallax backgrounds, physics ground

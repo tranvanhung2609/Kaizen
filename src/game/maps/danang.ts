@@ -129,13 +129,13 @@ export const danangMapConfig: MapConfig = {
       title: 'Cơn bão dữ liệu!',
       body: 'Boss Rồng Sông Hàn Data Storm đã trỗi dậy chắn cổng Cloud. Hãy chủ động gánh vác trách nhiệm và tiêu diệt nó để bảo vệ hệ thống của VTI!',
       durationMs: 5000,
-      imageAsset: 'bosses/hanoi_boss.png'
+      imageAsset: 'hanoi_boss.png'
     },
     mapClear: {
       title: 'Hoàn thành hành trình VTI!',
       body: 'Bạn đã xuất sắc chinh phục tất cả 3 chặng đường Hà Nội - Tokyo - Đà Nẵng. Hãy cùng tự hào về hành trình 9 năm Công nghệ kiến tạo giá trị mới!',
       durationMs: 6000,
-      imageAsset: 'mascot/hanoi_spritesheet.png'
+      imageAsset: 'player_male.png'
     }
   }
 };

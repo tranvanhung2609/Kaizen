@@ -1,4 +1,4 @@
-import { MapKey } from '../constants';
+import { MapKey } from '../engine/constants';
 
 export interface ParallaxLayerConfig {
   key: string;

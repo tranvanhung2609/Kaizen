@@ -129,13 +129,13 @@ export const hanoiMapConfig: MapConfig = {
       title: 'Cảnh báo Deadline!',
       body: 'Boss Deadline Cổ Phố đã chặn cổng Staging. Hãy khởi động Kaizen Mode bằng bàn phím cơ và bắn đạn Tab/Enter để giải phóng hệ thống!',
       durationMs: 4000,
-      imageAsset: 'bosses/hanoi_boss.png'
+      imageAsset: 'hanoi_boss.png'
     },
     mapClear: {
       title: 'Vượt ải Hà Nội thành công!',
       body: 'Bạn đã hoàn thành chặng đường Khởi nguồn. Trải qua chặng đường đầu tiên, tinh thần Tôn Trọng của VTIans luôn là kim chỉ nam trong việc phát triển và bàn giao dự án.',
       durationMs: 5000,
-      imageAsset: 'mascot/hanoi_spritesheet.png'
+      imageAsset: 'player_male.png'
     }
   }
 };
