@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { MapKey } from '../engine/constants';
+import { MapKey, MAP_SCROLL_SPEEDS, RUNNER_PHYSICS } from '../engine/constants';
 import { hanoiMapConfig } from '../maps/hanoi';
 import { tokyoMapConfig } from '../maps/tokyo';
 import { danangMapConfig } from '../maps/danang';
@@ -321,14 +321,20 @@ export default class GameScene extends Phaser.Scene {
       this.virtualScrollX = 0;
       state.distance = this.playerSys.sprite.x;
     } else if (state.currentPhase === 'runner') {
-      // Auto camera scroll at 1.5px/frame (fixed speed)
-      const speed = 1.5 * (delta / 16.67);
-      this.cameras.main.scrollX += speed;
+      // Cuộn camera theo tốc độ từng map (px/s) nhân với speedMultiplier
+      const mapKey = (this.mapConfig.mapKey as MapKey) ?? 'hanoi';
+      const basePxPerSec = MAP_SCROLL_SPEEDS[mapKey];
+      const scrollSpeed = (basePxPerSec * state.timeSpeedMultiplier * (delta / 1000));
+      this.cameras.main.scrollX += scrollSpeed;
       this.virtualScrollX = this.cameras.main.scrollX;
       state.distance = this.playerSys.sprite.x;
 
-      // Lock player X at 2/5 screen width
+      // Lock player X at 2/5 screen width — đồng bộ với camera
       this.playerSys.sprite.x = this.cameras.main.scrollX + width * 0.4;
+
+      // Dọn dẹp activePitRanges đã qua viewport để tránh tốn bộ nhớ
+      const camLeft = this.cameras.main.scrollX;
+      state.activePitRanges = state.activePitRanges.filter(r => r.end > camLeft - 300);
 
       this.spawn.generateTerrain(this.playerSys.sprite.x + 1024, state, this.mapConfig);
       this.spawn.generatePatterns(this.playerSys.sprite.x, state, this.mapConfig);
@@ -381,6 +387,43 @@ export default class GameScene extends Phaser.Scene {
 
     // Cập nhật player
     this.playerSys.update(time, delta, this.keys);
+
+    // Move enemies slowly towards player (chỉ xử lý max 8 enemies gần nhất)
+    const camScrollX = this.cameras.main.scrollX;
+    const enemyChildren = this.enemiesGroup.getChildren() as Phaser.Physics.Arcade.Sprite[];
+    let activeCount = 0;
+    for (const enemy of enemyChildren) {
+      if (!enemy || !enemy.active || !enemy.body) continue;
+      const distToCam = enemy.x - camScrollX;
+      // Chỉ xử lý enemy trong viewport + buffer 200px
+      if (distToCam < -100 || distToCam > 900) continue;
+      if (activeCount >= RUNNER_PHYSICS.maxEnemiesOnScreen) break;
+      activeCount++;
+
+      const px = this.playerSys.sprite.x + (enemy.getData('targetOffsetX') || 0);
+      const py = this.playerSys.sprite.y + (enemy.getData('targetOffsetY') || 0);
+      const speed = enemy.getData('speed') || 50;
+
+      const dx = px - enemy.x;
+      const dy = py - enemy.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (enemy.getData('kind') === 'flying_bug') {
+        if (dist > 5) {
+          const angle = Math.atan2(dy, dx);
+          (enemy.body as Phaser.Physics.Arcade.Body).setVelocity(
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed
+          );
+        } else {
+          (enemy.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+        }
+      } else {
+        // Ground bug chỉ di chuyển theo X, giữ nguyên velo Y (gravity)
+        const directionX = dx > 0 ? 1 : -1;
+        (enemy.body as Phaser.Physics.Arcade.Body).setVelocityX(directionX * speed);
+      }
+    }
 
     // Cập nhật vị trí title text
     if (this.titleTextObject?.visible && state.currentPhase !== 'map_clear') {

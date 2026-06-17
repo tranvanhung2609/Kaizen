@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { RUNNER_PHYSICS, SCORE_RULES, getDifficultyState } from '../engine/constants';
+import { RUNNER_PHYSICS, SCORE_RULES, MAP_SCROLL_SPEEDS, getDifficultyState } from '../engine/constants';
 import { GameState } from '../engine/GameState';
 import { AudioSynth } from '../engine/AudioSynth';
 
@@ -33,6 +33,7 @@ export class PlayerSystem {
   private jumpKeyWasDown = false;
   private lastSafePos = { x: 150, y: 200 };
   private controlsLocked = false;
+  private pointerJustPressed = false; // Flag to track touch/click jumps reliably
 
   // Cached dependencies
   private scene!: Phaser.Scene;
@@ -88,6 +89,7 @@ export class PlayerSystem {
     const onPointerDown = () => {
       if (state.currentPhase === 'intro' || state.currentPhase === 'runner') {
         this.jumpBufferTimeLeft = RUNNER_PHYSICS.JUMP_BUFFER_MS;
+        this.pointerJustPressed = true;
       } else if (state.currentPhase === 'boss') {
         const now = this.scene.time.now;
         if (now > state.nextShootTime) {
@@ -143,9 +145,12 @@ export class PlayerSystem {
 
     // ── 1. Horizontal Movement ─────────────────────────────────────────────
     if (state.currentPhase === 'runner') {
-      // Synchronized with camera speed of 1.5px/frame (90px/sec at 60 FPS)
-      const speed = 90 * (state.isKaizenMode ? 1.5 : 1.0);
-      this.sprite.setVelocityX(speed);
+      // X bị GameScene lock vào scrollX + 40% width mỗi frame.
+      // Đặt velocityX = tốc độ map thực tế để physics body không bị conflict.
+      const mapKey = (this.scene as any).mapConfig?.mapKey ?? 'hanoi';
+      const basePxPerSec = MAP_SCROLL_SPEEDS[mapKey as keyof typeof MAP_SCROLL_SPEEDS] ?? 90;
+      const runSpeed = basePxPerSec * state.timeSpeedMultiplier * (state.isKaizenMode ? 1.2 : 1.0);
+      this.sprite.setVelocityX(runSpeed);
     } else if (state.currentPhase === 'intro') {
       this.sprite.setVelocityX(0);
     } else if (state.currentPhase === 'boss') {
@@ -159,10 +164,10 @@ export class PlayerSystem {
     if (isFlying) {
       playerBody.setAllowGravity(false);
       this.sprite.setVelocityY(0);
-      const speed = 250;
+      const flySpeed = RUNNER_PHYSICS.flightSpeed;
       if (!this.controlsLocked) {
-        if (keys.up.isDown || keys.w.isDown) this.sprite.setVelocityY(-speed);
-        else if (keys.down.isDown || keys.s.isDown) this.sprite.setVelocityY(speed);
+        if (keys.up.isDown || keys.w.isDown) this.sprite.setVelocityY(-flySpeed);
+        else if (keys.down.isDown || keys.s.isDown) this.sprite.setVelocityY(flySpeed);
       }
 
       if (this.sprite.anims.currentAnim?.key !== `${state.activeGender}_fly`) {
@@ -182,6 +187,10 @@ export class PlayerSystem {
         if (!this.controlsLocked) {
           this.handleJump(keys, onGround, playerBody);
           this.handleAnimation(isCrouching, onGround, playerBody);
+        }
+        // Giới hạn tốc độ rơi xuống tối đa (clamp fall speed)
+        if (playerBody.velocity.y > RUNNER_PHYSICS.maxFallSpeed) {
+          playerBody.setVelocityY(RUNNER_PHYSICS.maxFallSpeed);
         }
       }
     }
@@ -213,9 +222,14 @@ export class PlayerSystem {
     const delta = this.scene.game.loop.delta;
 
     // Edge detection — nhận tín hiệu khi vừa nhấn, không khi giữ
-    const jumpKeyDown = keys.up.isDown || keys.w.isDown || this.scene.input.activePointer.isDown;
-    const justPressedJump = jumpKeyDown && !this.jumpKeyWasDown;
-    this.jumpKeyWasDown = jumpKeyDown;
+    const keyboardJumpKeyDown = keys.up.isDown || keys.w.isDown;
+    const keyboardJustPressed = keyboardJumpKeyDown && !this.jumpKeyWasDown;
+    this.jumpKeyWasDown = keyboardJumpKeyDown;
+
+    const justPressedJump = keyboardJustPressed || this.pointerJustPressed;
+    this.pointerJustPressed = false; // Reset flag for next frame
+
+    const jumpKeyDown = keyboardJumpKeyDown || this.scene.input.activePointer.isDown;
 
     // Coyote Time: cửa sổ 120ms sau khi bước ra khỏi mép
     if (this.wasOnGround && !onGround && playerBody.velocity.y >= 0) {
@@ -228,8 +242,8 @@ export class PlayerSystem {
     if (justPressedJump) this.jumpBufferTimeLeft = RUNNER_PHYSICS.JUMP_BUFFER_MS;
     if (this.jumpBufferTimeLeft > 0) this.jumpBufferTimeLeft -= delta;
 
-    // Double Jump reset khi chạm đất (chỉ khi Kaizen Mode)
-    if (onGround) this.hasDoubleJump = state.isKaizenMode;
+    // Double Jump reset khi chạm đất (mặc định)
+    if (onGround) this.hasDoubleJump = true;
 
     const canJump = onGround || this.coyoteTimeLeft > 0;
     const wantsJump = this.jumpBufferTimeLeft > 0;
@@ -244,9 +258,10 @@ export class PlayerSystem {
       this.coyoteTimeLeft = 0;
       this.jumpBufferTimeLeft = 0;
     } else if (canDoubleJump) {
-      // Double Jump — Kaizen Mode exclusive (85% lực)
+      // Double Jump — dùng doubleJumpFactor từ constants
       this.audio.playJump();
-      this.sprite.setVelocityY(RUNNER_PHYSICS.kaizenJumpForce * 0.85);
+      const baseFc = state.isKaizenMode ? RUNNER_PHYSICS.kaizenJumpForce : RUNNER_PHYSICS.jumpForce;
+      this.sprite.setVelocityY(baseFc * RUNNER_PHYSICS.doubleJumpFactor);
       this.sprite.play(`${state.activeGender}_jump`, true);
       this.hasDoubleJump = false;
       this.jumpBufferTimeLeft = 0;
@@ -280,7 +295,10 @@ export class PlayerSystem {
       playerBody.setSize(40, 120);
       playerBody.setOffset(65, 84);
     } else {
-      // Trên không — giữ hitbox chuẩn
+      // Trên không — giữ hiện thị animation _jump trong khi bay
+      if (this.sprite.anims.currentAnim?.key !== `${gender}_jump`) {
+        this.sprite.play(`${gender}_jump`, true);
+      }
       playerBody.setSize(40, 120);
       playerBody.setOffset(65, 84);
     }
@@ -288,16 +306,20 @@ export class PlayerSystem {
 
   // ─── Shoot ────────────────────────────────────────────────────────────────
   private shoot(time: number): void {
+    if (time < this.state.kaizenCooldownUntil) return; // Block shooting during cooldown
+
     this.audio.playShoot();
     this.state.nextShootTime = time + RUNNER_PHYSICS.shootCooldown;
-    const proj = this.projectiles.create(this.sprite.x + 30, this.sprite.y, 'kaizen_keyboard');
-    proj.setDisplaySize(24, 10).setVelocityX(800);
+    const proj = this.projectiles.create(this.sprite.x + 30, this.sprite.y, 'kaizen_bullet');
+    proj.setDisplaySize(20, 20).setVelocityX(800);
     proj.body.updateFromGameObject();
 
     if (this.state.isKaizenMode) {
       this.state.kaizenAmmo = Math.max(0, this.state.kaizenAmmo - 1);
       if (this.state.kaizenAmmo <= 0) {
         this.state.isKaizenMode = false;
+        this.state.kaizenCooldownUntil = time + 5000; // 5 seconds cooldown after ammo runs out
+        this.state.kaizenEnergy = 0;
         this.onRestoreTint();
         this.sprite.play(`${this.state.activeGender}_run`);
       }
@@ -316,6 +338,10 @@ export class PlayerSystem {
 
   private increaseEnergy(amount: number): void {
     const state = this.state;
+    if (this.scene.time.now < state.kaizenCooldownUntil) {
+      state.kaizenEnergy = 0;
+      return;
+    }
     state.kaizenEnergy = Math.min(100, state.kaizenEnergy + amount);
     if (state.kaizenEnergy >= 100 && !state.isKaizenMode) {
       this.activateKaizenMode(this.scene.time.now);
@@ -344,16 +370,11 @@ export class PlayerSystem {
     const state = this.state;
     this.audio.playDamage();
 
-    state.hearts = Math.max(0, state.hearts - 1);
+    state.hearts = 0; // Pit fall is immediate death (hearts = 0)
     (this.sprite as any).hp = state.hearts;
     this.onHudEmit();
 
-    if (state.hearts <= 0) {
-      this.triggerGameOver();
-      return;
-    }
-
-    this.triggerDamageRespawn();
+    this.triggerGameOver();
   }
 
   private triggerDamageRespawn(): void {
@@ -387,6 +408,7 @@ export class PlayerSystem {
   }
 
   private triggerGameOver(): void {
+    this.state.deathCount = (this.state.deathCount || 0) + 1;
     this.state.currentPhase = 'game_over';
     this.state.gameSpeed = 0;
     this.sprite.setVelocity(0, 0);
@@ -463,16 +485,43 @@ export class PlayerSystem {
     // Player projectile hits enemy
     this.onProjectileHitEnemy = (proj, enemy) => {
       proj.destroy();
-      enemy.play('bug_death', true);
-      enemy.body.setEnable(false);
-      audio.playFlask();
-      const pts =
-        enemy.getData('kind') === 'flying_bug'
-          ? SCORE_RULES.flyingBugDefeated
-          : SCORE_RULES.groundBugDefeated;
-      state.score += pts;
-      this.increaseEnergy(RUNNER_PHYSICS.energyPerBug);
-      scene.time.delayedCall(300, () => enemy.destroy());
+      let enemyHp = enemy.getData('hp');
+      if (enemyHp === undefined) {
+        enemyHp = enemy.getData('kind') === 'flying_bug' ? 100 : 50;
+      }
+      enemyHp -= 50; // Bullet damage
+      enemy.setData('hp', enemyHp);
+
+      if (enemyHp <= 0) {
+        enemy.play('bug_death', true);
+        enemy.body.setEnable(false);
+        audio.playFlask();
+        const pts =
+          enemy.getData('kind') === 'flying_bug'
+            ? SCORE_RULES.flyingBugDefeated
+            : SCORE_RULES.groundBugDefeated;
+        state.score += pts;
+        this.increaseEnergy(RUNNER_PHYSICS.energyPerBug);
+        scene.time.delayedCall(300, () => {
+          if (enemy && enemy.active) enemy.destroy();
+        });
+      } else {
+        // Flash white briefly when hit
+        enemy.setTint(0xffffff);
+        scene.time.delayedCall(100, () => {
+          if (enemy && enemy.active) {
+            // Restore original tint based on map
+            const mapKey = (scene as any).mapConfig?.mapKey;
+            if (mapKey === 'tokyo') {
+              enemy.setTint(enemy.getData('kind') === 'flying_bug' ? 0xff33cc : 0xff66cc);
+            } else if (mapKey === 'danang') {
+              enemy.setTint(enemy.getData('kind') === 'flying_bug' ? 0x00cccc : 0x33ffff);
+            } else {
+              enemy.clearTint();
+            }
+          }
+        });
+      }
     };
 
     // Player projectile cancels boss projectile
@@ -503,6 +552,7 @@ export class PlayerSystem {
     state.wingsUntil = 0;
     state.kaizenUntil = 0;
     state.nextShootTime = 0;
+    state.kaizenCooldownUntil = 0; // Reset Kaizen Cooldown on respawn
     state.gameTimeElapsed = 0;
     state.kaizenAmmo = 0;
     this.onRestoreTint();
@@ -514,6 +564,10 @@ export class PlayerSystem {
     state.invulnerableUntil = 0;
     this.sprite.setAlpha(1);
     (this.sprite as any).hp = 3;
+
+    if (options.checkpointX === 0) {
+      state.deathCount = 0;
+    }
 
     // Reposition
     const spawnX = options.isAtBoss

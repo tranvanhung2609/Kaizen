@@ -218,7 +218,7 @@ function RunTable({ data }: { data: RunRow[] }) {
 }
 
 // ─── Department Leaderboard Table ──────────────────────────────────────────────
-function PlayerTable({ data, activeTab }: { data: PlayerRow[]; activeTab: string }) {
+function PlayerTable({ data, activeTab, highlightUserId }: { data: PlayerRow[]; activeTab: string; highlightUserId?: string }) {
   const scoreKey = activeTab === 'hanoi' ? 'hanoiScore' :
                    activeTab === 'tokyo' ? 'tokyoScore' :
                    activeTab === 'danang' ? 'danangScore' : 'totalScore';
@@ -254,8 +254,12 @@ function PlayerTable({ data, activeTab }: { data: PlayerRow[]; activeTab: string
               
               // Custom current user highlighting
               const isCurrentUser = row.isCurrentUser;
+              const isHighlighted = !!highlightUserId && row.userId === highlightUserId;
               let rowStyle = 'hover:bg-slate-800/20';
-              if (isCurrentUser) {
+              if (isHighlighted) {
+                // Winner highlight — golden glow khi redirect từ game victory
+                rowStyle = 'bg-gradient-to-r from-yellow-500/10 to-brand-cyan/10 border-y-2 border-gold/60 shadow-[0_0_30px_rgba(255,215,0,0.25)]';
+              } else if (isCurrentUser) {
                 rowStyle = 'bg-brand-cyan/10 border-y border-brand-cyan/35 text-glow-cyan shadow-[0_0_15px_rgba(0,229,255,0.1)]';
               } else if (!row.hasPlayed) {
                 rowStyle = 'opacity-55 hover:bg-slate-800/10';
@@ -458,10 +462,11 @@ export interface LeaderboardTableProps {
   runData?: RunRow[];
   playerData?: PlayerRow[];
   deptData?: DeptRow[];
+  highlightUserId?: string;
 }
 
-export default function LeaderboardTable({ scope, activeTab, runData, playerData, deptData }: LeaderboardTableProps) {
+export default function LeaderboardTable({ scope, activeTab, runData, playerData, deptData, highlightUserId }: LeaderboardTableProps) {
   if (scope === 'personal') return <RunTable data={runData ?? []} />;
   if (scope === 'vti')      return <DeptTable data={deptData ?? []} activeTab={activeTab} />;
-  return <PlayerTable data={playerData ?? []} activeTab={activeTab} />;
+  return <PlayerTable data={playerData ?? []} activeTab={activeTab} highlightUserId={highlightUserId} />;
 }

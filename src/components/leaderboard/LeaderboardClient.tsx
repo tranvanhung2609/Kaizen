@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useTransition } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useTransition, useEffect, useRef } from 'react';
 import LeaderboardTable from './LeaderboardTable';
 import type { PlayerRow, DeptRow, RunRow } from '@/app/leaderboard/page';
 
@@ -11,10 +11,11 @@ interface LeaderboardClientProps {
   myDept: string;
   myRank: number;
   myRunCount: number;
-  userId: string;
+  userId?: string;
   runRows: RunRow[];
   playerRows: PlayerRow[];
   deptRows: DeptRow[];
+  highlightUserId?: string;
 }
 
 const TABS = [
@@ -39,12 +40,30 @@ export default function LeaderboardClient({
   runRows,
   playerRows,
   deptRows,
+  highlightUserId,
 }: LeaderboardClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const highlightRef = useRef<HTMLDivElement>(null);
+
+  // Highlight param từ URL (redirect sau khi clear map)
+  const highlightFromUrl = searchParams.get('highlight') || highlightUserId;
+  const isJustSaved = !!searchParams.get('highlight');
+
+  // Auto-scroll tới row được highlight
+  useEffect(() => {
+    if (highlightFromUrl && highlightRef.current) {
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 600);
+    }
+  }, [highlightFromUrl]);
 
   const navigate = (tab: string, scope: string) => {
-    startTransition(() => router.push(`/leaderboard?tab=${tab}&scope=${scope}`));
+    // Giữ highlight param khi chuyển tab
+    const hParam = highlightFromUrl ? `&highlight=${highlightFromUrl}` : '';
+    startTransition(() => router.push(`/leaderboard?tab=${tab}&scope=${scope}${hParam}`));
   };
 
   const totalCount =
@@ -73,6 +92,27 @@ export default function LeaderboardClient({
   return (
     <div className="flex flex-col gap-6 z-10 relative">
       
+      {/* ── Victory Banner (hiện khi redirect từ game) ──────────────────────── */}
+      {isJustSaved && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px',
+          borderRadius: 16, background: 'linear-gradient(135deg, rgba(0,255,135,0.12) 0%, rgba(0,84,166,0.08) 100%)',
+          border: '1px solid rgba(0,255,135,0.35)', animation: 'slideDown 0.5s ease-out',
+        }}>
+          <span style={{ fontSize: 28 }}>🏆</span>
+          <div>
+            <div style={{ color: '#00ff87', fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+              Điểm đã được lưu thành công!
+            </div>
+            <div style={{ color: '#64748b', fontSize: 11, fontFamily: 'monospace' }}>
+              Kết quả của bạn đã được cập nhật vào bảng xếp hạng VTI. Cuộn xuống để xem vị trí của bạn.
+            </div>
+          </div>
+        </div>
+      )}
+      <style>{`
+        @keyframes slideDown { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+      `}</style>
       {/* ── Header Area ────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
         <div>
@@ -225,7 +265,7 @@ export default function LeaderboardClient({
           </a>
         </div>
       ) : (
-        <div className={`w-full game-container rounded-3xl overflow-hidden border border-slate-800/80 transition-opacity duration-300 ${
+        <div ref={highlightRef} className={`w-full game-container rounded-3xl overflow-hidden border border-slate-800/80 transition-opacity duration-300 ${
           isPending ? 'opacity-40 pointer-events-none' : 'opacity-100'
         }`}>
           <LeaderboardTable
@@ -234,6 +274,7 @@ export default function LeaderboardClient({
             runData={runRows}
             playerData={playerRows}
             deptData={deptRows}
+            highlightUserId={highlightFromUrl || ''}
           />
         </div>
       )}

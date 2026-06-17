@@ -22,6 +22,10 @@ export class SpawnSystem {
   private nextGroundX = -128;
   private nextPatternX = 800;
 
+  // Trạng thái sinh đường chạy ngẫu nhiên (Platform xen kẽ Pit)
+  private nextRandomSegmentX = 800;
+  private isGeneratingPlatform = true;
+
   /** Khởi tạo references đến scene và physics groups. Gọi trong create(). */
   init(scene: Phaser.Scene, groups: PhysicsGroups): void {
     this.scene = scene;
@@ -30,7 +34,11 @@ export class SpawnSystem {
 
   /** Reset vị trí con trỏ sinh. Dùng khi respawn checkpoint. */
   reset(options: { groundX?: number; patternX?: number } = {}): void {
-    if (options.groundX !== undefined) this.nextGroundX = options.groundX;
+    if (options.groundX !== undefined) {
+      this.nextGroundX = options.groundX;
+      this.nextRandomSegmentX = Math.max(800, options.groundX);
+      this.isGeneratingPlatform = true;
+    }
     if (options.patternX !== undefined) this.nextPatternX = options.patternX;
   }
 
@@ -43,10 +51,32 @@ export class SpawnSystem {
     const isHanoi = mapConfig.mapKey === 'hanoi';
 
     while (this.nextGroundX < playerAheadX) {
-      const inPit = state.activePitRanges.some(
-        r => this.nextGroundX >= r.start && this.nextGroundX <= r.end
-      );
-      if (!inPit) {
+      let shouldSpawnBlock = true;
+
+      // Gameplay zone ngẫu nhiên từ X=800 đến sát trước boss
+      if (this.nextGroundX >= 800 && this.nextGroundX < state.bossTriggerX - 500) {
+        if (this.nextGroundX >= this.nextRandomSegmentX) {
+          // Chuyển đổi trạng thái Platform <=> Pit
+          this.isGeneratingPlatform = !this.isGeneratingPlatform;
+          
+          if (this.isGeneratingPlatform) {
+            // Platform: Chiều dài ngẫu nhiên từ 256px đến 512px (bội số của 64)
+            const width = Math.floor(Phaser.Math.Between(256, 512) / 64) * 64;
+            this.nextRandomSegmentX = this.nextGroundX + width;
+            
+            // Sinh các vật thể ngẫu nhiên trên platform này
+            this.spawnRandomEntitiesOnPlatform(this.nextGroundX, width, state, mapConfig);
+          } else {
+            // Gap (Pit): Khoảng cách ngẫu nhiên từ 128px đến 192px (bội số của 64)
+            const gapWidth = Math.floor(Phaser.Math.Between(128, 192) / 64) * 64;
+            this.nextRandomSegmentX = this.nextGroundX + gapWidth;
+            state.activePitRanges.push({ start: this.nextGroundX, end: this.nextRandomSegmentX });
+          }
+        }
+        shouldSpawnBlock = this.isGeneratingPlatform;
+      }
+
+      if (shouldSpawnBlock) {
         if (isHanoi) {
           const x = this.nextGroundX + 32;
           const block = this.scene.add.tileSprite(x, GROUND_Y, 64, 40, 'hanoi_ground_tiles');
@@ -69,25 +99,89 @@ export class SpawnSystem {
     }
   }
 
-  // ─── Pattern Generation ─────────────────────────────────────────────────────
-  // Chọn ngẫu nhiên một pattern từ mapConfig và spawn phía trước player.
-  // Gap giữa các pattern được rút ngắn theo difficulty tier (tier cao → gap ngắn hơn).
-  generatePatterns(playerX: number, state: GameState, mapConfig: MapConfig): void {
-    if (state.isBossFight) return;
-    
-    // Lấy difficulty state từ score hiện tại
-    const diff = getDifficultyState(state.score);
-    const maxGap = Math.max(diff.minPatternGap + 150, 400 - diff.tier * 30);
+  /** Sinh các vật thể ngẫu nhiên trên platform */
+  private spawnRandomEntitiesOnPlatform(startX: number, width: number, state: GameState, mapConfig: MapConfig): void {
+    if (startX < 900 || startX > state.bossTriggerX - 600) return;
 
-    while (
-      this.nextPatternX < playerX + 1500 &&
-      this.nextPatternX < state.bossTriggerX - 800
-    ) {
-      const randomPattern = Phaser.Utils.Array.GetRandom(mapConfig.spawnPatterns);
-      this.spawnPattern(randomPattern, this.nextPatternX, state, mapConfig);
-      // Gap ngẫu nhiên trong khoảng [minPatternGap, maxGap]
-      this.nextPatternX += randomPattern.width + Phaser.Math.Between(diff.minPatternGap, maxGap);
+    // Chia platform thành các slot 128px
+    const slotsCount = Math.floor(width / 128);
+    let enemiesSpawned = 0; // Giới hạn max 2 enemies/platform
+    let obstaclesSpawned = 0; // Giới hạn max 1 bomb/platform
+
+    for (let i = 0; i < slotsCount; i++) {
+      const spawnX = startX + 64 + i * 128;
+      const rand = Math.random();
+
+      if (rand < 0.25) {
+        // Spawn bình kinh nghiệm (XP Flask) — luôn spawn, không giới hạn
+        const flask = this.groups.flasks.create(spawnX, 310, 'xp_flask');
+        flask.setDisplaySize(20, 20);
+        flask.body.updateFromGameObject();
+      } else if (rand < 0.50 && enemiesSpawned < 2) {
+        // Spawn Enemy (Lính) — tối đa 2/platform
+        const isFlying = Math.random() < 0.4;
+        enemiesSpawned++;
+        if (isFlying) {
+          const flyY = 220 + Math.random() * 80; // Bay ở độ cao 220-300
+          const bug = this.groups.enemies.create(spawnX, flyY, 'bug2_enemies');
+          bug.setScale(0.2).play('bug_prod_fly').setData('kind', 'flying_bug');
+          bug.setData('hp', 100);
+          bug.setData('speed', Phaser.Math.Between(40, 70));
+          bug.setData('targetOffsetX', Phaser.Math.Between(-50, 50));
+          bug.setData('targetOffsetY', Phaser.Math.Between(-80, 20));
+          bug.body.updateFromGameObject();
+          bug.body.setAllowGravity(false);
+
+          // Hover animation (up-down sine wave)
+          this.scene.tweens.add({
+            targets: bug,
+            y: flyY - 25,
+            duration: Phaser.Math.Between(900, 1200),
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut',
+          });
+
+          if (mapConfig.mapKey === 'tokyo') bug.setTint(0xff33cc);
+          else if (mapConfig.mapKey === 'danang') bug.setTint(0x00cccc);
+        } else {
+          const bug = this.groups.enemies.create(spawnX, 330, 'bug1_enemies');
+          bug.setScale(0.2).play('bug_staging_crawl').setData('kind', 'ground_bug');
+          bug.setData('hp', 50);
+          bug.setData('speed', Phaser.Math.Between(30, 60));
+          bug.setData('targetOffsetX', Phaser.Math.Between(-20, 20));
+          bug.body.updateFromGameObject();
+          bug.body.setGravityY(500);
+
+          if (mapConfig.mapKey === 'tokyo') bug.setTint(0xff66cc);
+          else if (mapConfig.mapKey === 'danang') bug.setTint(0x33ffff);
+        }
+      } else if (rand < 0.65 && obstaclesSpawned < 1) {
+        // Spawn vật cản (bom) — tối đa 1/platform
+        obstaclesSpawned++;
+        const bomb = this.groups.obstacles.create(spawnX, 335, 'tech_debt_bomb');
+        bomb.setDisplaySize(24, 24);
+        bomb.body.updateFromGameObject();
+      } else if (rand < 0.75) {
+        // Spawn Powerup ngẫu nhiên — keyboard powerup hiếm hơn (10%)
+        const r2 = Math.random();
+        let pType = 'respect';
+        let key = 'respect_shield';
+        if (r2 < 0.40) { pType = 'respect'; key = 'respect_shield'; }
+        else if (r2 < 0.75) { pType = 'wings'; key = 'responsibility_wings'; }
+        else { pType = 'keyboard'; key = 'kaizen_keyboard'; }
+
+        const p = this.groups.powerups.create(spawnX, 310, key);
+        p.setDisplaySize(24, 24).setData('kind', pType);
+        p.body.updateFromGameObject();
+      }
     }
+  }
+
+  // ─── Pattern Generation ─────────────────────────────────────────────────────
+  // Không sử dụng khi đã kích hoạt bộ sinh ngẫu nhiên để tránh xung đột vị trí
+  generatePatterns(playerX: number, state: GameState, mapConfig: MapConfig): void {
+    return;
   }
 
   private spawnPattern(pattern: any, startX: number, state: GameState, mapConfig: MapConfig): void {

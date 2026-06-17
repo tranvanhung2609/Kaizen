@@ -37,12 +37,22 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
     bossName: 'Boss Deadline Cổ Phố',
     playerName: '',
     isKaizenMode: false,
+    cooldownRemaining: 0,
+    shieldRemaining: 0,
+    wingsRemaining: 0,
+    deathCount: 0,
   });
+
+  const [isPaused, setIsPaused] = useState(false);
 
   const [bossIntroData, setBossIntroData] = useState<any>(null);
   const [mapClearData, setMapClearData] = useState<any>(null);
   const [isGameOver, setIsGameOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Rank result sau khi lưu điểm — trả về từ API
+  const [rankResult, setRankResult] = useState<{ rank: number; totalPlayers: number; totalScore: number } | null>(null);
+  // Flag: đã lưu xong chưa
+  const [isSaved, setIsSaved] = useState(false);
 
   // Redesign additional states (Configs are hardcoded)
   const flasksCount = 0;
@@ -118,11 +128,91 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
 
   const handleMapClear = useCallback((data: any) => {
     setMapClearData(data);
+    setRankResult(null);
+    setIsSaved(false);
   }, []);
+
+  // ── Tự động lưu điểm ngay khi boss bị hạ ──────────────────────────────
+  useEffect(() => {
+    if (!mapClearData || isSaved || isSubmitting) return;
+
+    const autoSave = async () => {
+      setIsSubmitting(true);
+      try {
+        const stats = mapClearData.stats;
+        const currentMapKey = hudState.mapKey;
+
+        const response = await fetch('/api/game/submit-run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userDetails.id,
+            mapKey: currentMapKey,
+            score: stats.score,
+            completionTime: stats.gameTime,
+            bossCleared: true,
+            flasksCollected: stats.flasksCollected,
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setRankResult({
+            rank: result.rank || 0,
+            totalPlayers: result.totalPlayers || 0,
+            totalScore: result.totalScore || stats.score,
+          });
+          setIsSaved(true);
+        } else {
+          // Làm nổi bật lỗi nhưng không block UI
+          console.error('[GameDashboard] Auto-save failed:', await response.text());
+          setIsSaved(true); // Vẫn cho tiếp tục
+        }
+      } catch (err) {
+        console.error('[GameDashboard] Auto-save error:', err);
+        setIsSaved(true);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    autoSave();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapClearData]);
 
   const handleGameOver = useCallback(() => {
     setIsGameOver(true);
   }, []);
+
+  const handlePauseToggle = useCallback(() => {
+    if (isGameOver || mapClearData || bossIntroData) return;
+    setIsPaused((prev) => {
+      const next = !prev;
+      if (gameRef.current) {
+        const gameScene = gameRef.current.scene.getScene('GameScene');
+        if (gameScene) {
+          if (next) {
+            gameScene.scene.pause();
+          } else {
+            gameScene.scene.resume();
+          }
+        }
+      }
+      return next;
+    });
+  }, [isGameOver, mapClearData, bossIntroData]);
+
+  // Listen to keyboard Esc and P keys to toggle pause
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        handlePauseToggle();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handlePauseToggle]);
 
   const handleCloseBossIntro = () => {
     setBossIntroData(null);
@@ -130,6 +220,7 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
 
   const handleRestartGame = () => {
     setIsGameOver(false);
+    setIsPaused(false);
     setBossIntroData(null);
     setMapClearData(null);
     
@@ -141,59 +232,56 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
     }
   };
 
+  const handleRestartFromBeginning = () => {
+    setIsGameOver(false);
+    setIsPaused(false);
+    setBossIntroData(null);
+    setMapClearData(null);
+    
+    if (gameRef.current) {
+      const gameScene = gameRef.current.scene.getScene('GameScene');
+      if (gameScene) {
+        // Reset GameState checkpoints and scores
+        gameScene.state.checkpointX = 0;
+        gameScene.state.checkpointScore = 0;
+        gameScene.state.checkpointEnergy = 0;
+        gameScene.state.checkpointFlasks = 0;
+        gameScene.state.deathCount = 0;
+        gameScene.state.score = 0;
+        gameScene.state.kaizenEnergy = 0;
+        gameScene.state.flasksCollected = 0;
+        gameScene.state.hearts = 3;
+        
+        gameScene.respawn();
+      }
+    }
+  };
+
   const handleNextMap = async () => {
-    if (!mapClearData || isSubmitting) return;
-    setIsSubmitting(true);
+    if (!mapClearData) return;
 
-    try {
-      const stats = mapClearData.stats;
-      const currentMapKey = hudState.mapKey;
-      
-      const response = await fetch('/api/game/submit-run', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userDetails.id,
-          mapKey: currentMapKey,
-          score: stats.score,
-          completionTime: stats.gameTime,
-          bossCleared: true,
-        }),
-      });
+    const currentMapKey = hudState.mapKey;
+    let nextMapKey = '';
+    if (currentMapKey === 'hanoi') nextMapKey = 'tokyo';
+    else if (currentMapKey === 'tokyo') nextMapKey = 'danang';
 
-      if (!response.ok) {
-        throw new Error('Gửi điểm số thất bại!');
-      }
-
-      let nextMapKey = '';
-      if (currentMapKey === 'hanoi') {
-        nextMapKey = 'tokyo';
-      } else if (currentMapKey === 'tokyo') {
-        nextMapKey = 'danang';
-      }
-
-      if (nextMapKey) {
-        if (gameRef.current) {
-          const gameScene = gameRef.current.scene.getScene('GameScene');
-          if (gameScene) {
-            setMapClearData(null);
-            setBossIntroData(null);
-            setIsGameOver(false);
-            gameRef.current.scene.start('GameScene', { mapKey: nextMapKey });
-          }
+    if (nextMapKey) {
+      // Tiếp tục map tiếp theo
+      if (gameRef.current) {
+        const gameScene = gameRef.current.scene.getScene('GameScene');
+        if (gameScene) {
+          setMapClearData(null);
+          setBossIntroData(null);
+          setIsGameOver(false);
+          setRankResult(null);
+          setIsSaved(false);
+          gameRef.current.scene.start('GameScene', { mapKey: nextMapKey });
         }
-      } else {
-        router.push('/leaderboard');
-        router.refresh();
       }
-    } catch (err) {
-      console.error('Error submitting score:', err);
-      alert('Đã xảy ra lỗi khi lưu kết quả game. Hệ thống sẽ chuyển tiếp.');
-      router.push('/leaderboard');
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      // Map cuối (danang) — chuyển sang leaderboard với highlight
+      router.push(`/leaderboard?highlight=${userDetails.id}&tab=overall&scope=vti`);
+      router.refresh();
     }
   };
 
@@ -245,6 +333,10 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
               onOpenMap={() => setIsMapModalOpen(true)}
               onOpenSkills={() => setIsSkillsModalOpen(true)}
               isKaizenMode={hudState.isKaizenMode}
+              cooldownRemaining={hudState.cooldownRemaining}
+              shieldRemaining={hudState.shieldRemaining}
+              wingsRemaining={hudState.wingsRemaining}
+              onPauseToggle={handlePauseToggle}
             />
 
             {/* 3. Cutscenes Overlays */}
@@ -252,9 +344,18 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
               bossIntroData={bossIntroData}
               mapClearData={mapClearData}
               isGameOver={isGameOver}
+              isPaused={isPaused}
               onCloseBossIntro={handleCloseBossIntro}
               onRestartGame={handleRestartGame}
               onNextMap={handleNextMap}
+              onResumeGame={handlePauseToggle}
+              onRestartFromBeginning={handleRestartFromBeginning}
+              deathCount={hudState.deathCount}
+              rankResult={rankResult}
+              isSubmitting={isSubmitting}
+              isSaved={isSaved}
+              userId={userDetails.id}
+              currentMapKey={hudState.mapKey}
             />
           </div>
         </ArcadeConsoleFrame>

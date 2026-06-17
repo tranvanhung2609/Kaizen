@@ -21,6 +21,7 @@ export interface GameState {
   wingsUntil: number;
   kaizenUntil: number;
   nextShootTime: number;
+  kaizenCooldownUntil: number; // Cooldown timer after Kaizen mode ends
   invulnerableUntil: number; // Duration of damage immunity after pit falls
   timeSpeedMultiplier: number; // Scrolling speed scaling over time
 
@@ -48,6 +49,9 @@ export interface GameState {
   activeSkin: string;
   activeTitle: string;
   activeGender: string;
+
+  // Death limit tracking
+  deathCount: number;
 }
 
 /** Tạo GameState mới với giá trị mặc định. Gọi ở đầu mỗi màn chơi. */
@@ -68,6 +72,7 @@ export function createInitialGameState(): GameState {
     wingsUntil: 0,
     kaizenUntil: 0,
     nextShootTime: 0,
+    kaizenCooldownUntil: 0,
     invulnerableUntil: 0,
     timeSpeedMultiplier: 1.0,
 
@@ -88,5 +93,6 @@ export function createInitialGameState(): GameState {
     activeSkin: 'skin_default',
     activeTitle: '',
     activeGender: 'male',
+    deathCount: 0,
   };
 }

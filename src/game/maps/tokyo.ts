@@ -119,7 +119,7 @@ export const tokyoMapConfig: MapConfig = {
   ],
   bossConfig: {
     name: 'Boss Kaizen Breaker',
-    maxHp: 8, // More health than Hanoi
+    maxHp: 1500, // More health than Hanoi
     bulletsPattern: 'sinusoidal',
     bulletSpeed: 300,
     shootInterval: 1800

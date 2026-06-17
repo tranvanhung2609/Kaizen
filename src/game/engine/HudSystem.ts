@@ -22,6 +22,10 @@ export class HudSystem {
   private lastTier = -1; // Difficulty tier tracking
   private lastPlayerName = '';
   private lastIsKaizenMode = false;
+  private lastCooldownRemaining = -1;
+  private lastShieldRemaining = -1;
+  private lastWingsRemaining = -1;
+  private lastDeathCount = -1;
 
   /** Khởi tạo reference đến scene. Gọi trong create(). */
   init(scene: Phaser.Scene): void {
@@ -39,6 +43,10 @@ export class HudSystem {
     this.lastTier = -1;
     this.lastPlayerName = '';
     this.lastIsKaizenMode = false;
+    this.lastCooldownRemaining = -1;
+    this.lastShieldRemaining = -1;
+    this.lastWingsRemaining = -1;
+    this.lastDeathCount = -1;
   }
 
   // ─── HUD Event Emitter ────────────────────────────────────────────────────
@@ -49,6 +57,13 @@ export class HudSystem {
     const diff = getDifficultyState(state.score);
 
     const playerName = this.scene.registry.get('playerName') || 'Player';
+    const now = this.scene.time.now;
+    const cooldownRemaining = Math.max(0, Math.round((state.kaizenCooldownUntil - now) / 1000));
+    
+    // Calculate remaining duration for shield and wings in seconds
+    const shieldRemaining = Math.max(0, Math.round((state.shieldUntil - now) / 1000));
+    const wingsRemaining = Math.max(0, Math.round((state.wingsUntil - now) / 1000));
+    const deathCount = state.deathCount || 0;
 
     if (
       state.score === this.lastScore &&
@@ -59,7 +74,11 @@ export class HudSystem {
       roundedTime === this.lastTimeElapsed &&
       diff.tier === this.lastTier &&
       playerName === this.lastPlayerName &&
-      state.isKaizenMode === this.lastIsKaizenMode
+      state.isKaizenMode === this.lastIsKaizenMode &&
+      cooldownRemaining === this.lastCooldownRemaining &&
+      shieldRemaining === this.lastShieldRemaining &&
+      wingsRemaining === this.lastWingsRemaining &&
+      deathCount === this.lastDeathCount
     ) return; // Không thay đổi — bỏ qua
 
     this.lastScore = state.score;
@@ -71,6 +90,10 @@ export class HudSystem {
     this.lastTier = diff.tier;
     this.lastPlayerName = playerName;
     this.lastIsKaizenMode = state.isKaizenMode;
+    this.lastCooldownRemaining = cooldownRemaining;
+    this.lastShieldRemaining = shieldRemaining;
+    this.lastWingsRemaining = wingsRemaining;
+    this.lastDeathCount = deathCount;
 
     const mapName =
       mapConfig.mapKey === 'hanoi' ? 'Hà Nội' :
@@ -92,6 +115,10 @@ export class HudSystem {
       speedMultiplier: diff.speedMultiplier,
       playerName,
       isKaizenMode: state.isKaizenMode,
+      cooldownRemaining,
+      shieldRemaining,
+      wingsRemaining,
+      deathCount,
     });
   }
 

@@ -112,6 +112,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.load.image('respect_shield', '/assets/items/shield.png');
     this.load.image('responsibility_wings', '/assets/items/wing.png');
     this.load.image('kaizen_keyboard', '/assets/items/keyboard.png');
+    this.load.image('kaizen_bullet', '/assets/items/keycap.png');
 
     // Boss bullets / electrical voltage
     this.load.image('security_voltage', '/assets/items/security_voltage.png');

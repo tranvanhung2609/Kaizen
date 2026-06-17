@@ -17,6 +17,10 @@ interface HUDProps {
   onOpenSkills?: () => void;
   playerName?: string;
   isKaizenMode?: boolean;
+  cooldownRemaining?: number;
+  shieldRemaining?: number;
+  wingsRemaining?: number;
+  onPauseToggle?: () => void;
 }
 
 const ENERGY_SEGMENTS = 10;
@@ -44,6 +48,10 @@ export default function HUD({
   onOpenSkills,
   playerName,
   isKaizenMode: isKaizenModeProp,
+  cooldownRemaining = 0,
+  shieldRemaining = 0,
+  wingsRemaining = 0,
+  onPauseToggle,
 }: HUDProps) {
   const isKaizenMode = isKaizenModeProp !== undefined ? isKaizenModeProp : (energy >= 100 || phase === 'map_clear');
   const isBossPhase  = phase === 'boss';
@@ -130,8 +138,18 @@ export default function HUD({
                 {mapName.toUpperCase()}
               </h1>
             </div>
-            <div className="font-mono text-[10px] text-slate-500 tracking-widest">
-              ⏱ {formatTime(timeElapsed)}
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="font-mono text-[10px] text-slate-500 tracking-widest">
+                ⏱ {formatTime(timeElapsed)}
+              </span>
+              {onPauseToggle && (
+                <button
+                  onClick={onPauseToggle}
+                  className="bg-navy-medium/85 hover:bg-brand-cyan hover:text-navy-dark px-2 py-0.5 rounded border border-brand-cyan/40 text-[9px] font-bold text-slate-300 pointer-events-auto active:scale-95 transition-all cursor-pointer"
+                >
+                  ⏸️ TẠM DỪNG
+                </button>
+              )}
             </div>
           </div>
 
@@ -158,6 +176,36 @@ export default function HUD({
             </div>
           </div>
         </header>
+
+        {/* Active Buffs (Shield / Wings) */}
+        {(shieldRemaining > 0 || wingsRemaining > 0) && (
+          <div className="absolute left-3 top-16 flex flex-col gap-1.5 pointer-events-auto">
+            {shieldRemaining > 0 && (
+              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 px-2.5 py-1 rounded-xl shadow-[0_0_12px_rgba(34,197,94,0.15)] backdrop-blur-sm animate-pulse">
+                <img
+                  src="/assets/items/shield.png"
+                  className="w-5 h-5 object-contain filter drop-shadow-[0_0_4px_rgba(34,197,94,0.5)]"
+                  alt="Shield"
+                />
+                <span className="text-[9px] font-bold text-green-400 font-mono tracking-wider">
+                  KHIÊN: {shieldRemaining}s
+                </span>
+              </div>
+            )}
+            {wingsRemaining > 0 && (
+              <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-1 rounded-xl shadow-[0_0_12px_rgba(6,182,212,0.15)] backdrop-blur-sm animate-pulse">
+                <img
+                  src="/assets/items/wing.png"
+                  className="w-5 h-5 object-contain filter drop-shadow-[0_0_4px_rgba(6,182,212,0.5)]"
+                  alt="Wings"
+                />
+                <span className="text-[9px] font-bold text-cyan-400 font-mono tracking-wider">
+                  BAY LÊN: {wingsRemaining}s
+                </span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ════════════════════ MIDDLE — Boss HP ═══════════ */}
         <main className="flex-grow flex items-center justify-end relative">
@@ -213,6 +261,7 @@ export default function HUD({
           {/* CENTER — Kaizen Energy segments */}
           <div
             className={`flex-1 max-w-sm bg-navy-medium/60 px-4 py-2.5 rounded-2xl border-2 backdrop-blur-md relative ${
+              cooldownRemaining > 0 ? 'border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.25)]' :
               isKaizenMode ? 'border-brand-red shadow-[0_0_20px_rgba(255,59,48,0.3)]' : 'border-slate-700/60'
             }`}
           >
@@ -221,30 +270,35 @@ export default function HUD({
               <div className="flex items-center gap-1.5">
                 <div
                   className={`w-1.5 h-1.5 rotate-45 ${
+                    cooldownRemaining > 0 ? 'bg-orange-500 animate-pulse' :
                     isKaizenMode ? 'bg-brand-red animate-pulse' : 'bg-brand-cyan'
                   }`}
                 />
                 <span
                   className={`font-display text-[10px] font-bold uppercase tracking-wider ${
+                    cooldownRemaining > 0 ? 'text-orange-500 animate-pulse' :
                     isKaizenMode ? 'text-brand-red text-glow-red animate-pulse' : 'text-slate-300'
                   }`}
                 >
-                  {isKaizenMode ? '⚡ KAIZEN AMMO ⚡' : 'KAIZEN ENERGY'}
+                  {cooldownRemaining > 0 ? '⏳ KAIZEN COOLDOWN ⏳' :
+                   isKaizenMode ? '⚡ KAIZEN AMMO ⚡' : 'KAIZEN ENERGY'}
                 </span>
               </div>
               <span
                 className={`font-mono text-[10px] font-bold ${
+                  cooldownRemaining > 0 ? 'text-orange-500 animate-pulse' :
                   isKaizenMode ? 'text-brand-red animate-pulse' : 'text-brand-cyan'
                 }`}
               >
-                {isKaizenMode ? `${filledSegments}/10` : `${Math.floor(energy)}%`}
+                {cooldownRemaining > 0 ? `${cooldownRemaining}s` :
+                 isKaizenMode ? `${filledSegments}/10` : `${Math.floor(energy)}%`}
               </span>
             </div>
 
             {/* Segment bar */}
             <div className="flex gap-0.5">
               {[...Array(ENERGY_SEGMENTS)].map((_, i) => {
-                const filled = i < filledSegments;
+                const filled = cooldownRemaining > 0 ? false : (i < filledSegments);
                 const isLast = filled && i === filledSegments - 1;
                 return (
                   <div
@@ -262,15 +316,25 @@ export default function HUD({
             </div>
 
             {/* Kaizen hint */}
-            {isKaizenMode && (
+            {cooldownRemaining > 0 ? (
+              <div className="text-[9px] text-center text-orange-500 font-bold animate-pulse mt-1.5 tracking-wider font-mono">
+                HỆ THỐNG ĐANG RE-COMPILE... VUI LÒNG ĐỢI!
+              </div>
+            ) : isKaizenMode ? (
               <div className="text-[9px] text-center text-brand-red font-bold animate-pulse mt-1.5 tracking-wider font-mono">
                 ẤN SPACE → KAIZEN KEYBOARD!
               </div>
-            )}
+            ) : null}
 
             {/* Corner accents */}
-            <div className={`absolute -top-px -left-px w-3 h-3 border-t-2 border-l-2 rounded-tl-sm ${isKaizenMode ? 'border-brand-red' : 'border-brand-cyan'}`} />
-            <div className={`absolute -top-px -right-px w-3 h-3 border-t-2 border-r-2 rounded-tr-sm ${isKaizenMode ? 'border-brand-red' : 'border-brand-cyan'}`} />
+            <div className={`absolute -top-px -left-px w-3 h-3 border-t-2 border-l-2 rounded-tl-sm ${
+              cooldownRemaining > 0 ? 'border-orange-500' :
+              isKaizenMode ? 'border-brand-red' : 'border-brand-cyan'
+            }`} />
+            <div className={`absolute -top-px -right-px w-3 h-3 border-t-2 border-r-2 rounded-tr-sm ${
+              cooldownRemaining > 0 ? 'border-orange-500' :
+              isKaizenMode ? 'border-brand-red' : 'border-brand-cyan'
+            }`} />
           </div>
 
           {/* RIGHT — Quick actions */}

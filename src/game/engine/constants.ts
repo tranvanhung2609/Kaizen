@@ -4,8 +4,16 @@
 export type MapKey = 'hanoi' | 'tokyo' | 'danang';
 export type GamePhase = 'intro' | 'runner' | 'boss_intro' | 'boss' | 'map_clear' | 'game_over';
 
+// Tốc độ cuộn camera (px/frame ở 60fps) theo từng map — khớp GDD
+// Hanoi=90px/s, Tokyo=110px/s, Danang=130px/s
+export const MAP_SCROLL_SPEEDS: Record<MapKey, number> = {
+  hanoi:  90,  // px/s
+  tokyo:  110,
+  danang: 130,
+};
+
 export const RUNNER_PHYSICS = {
-  // Speed is multiplier for scroll speed
+  // Speed is multiplier for scroll speed (legacy — dùng MAP_SCROLL_SPEEDS thay thế)
   baseSpeed: 5.5,
   hanoiSpeed: 5.5,
   tokyoSpeed: 6.5,
@@ -13,31 +21,36 @@ export const RUNNER_PHYSICS = {
   
   // Gravity & movement values (standardized for 960x540 canvas)
   gravity: 850,
-  jumpForce: -440,
-  kaizenJumpForce: -540, // super jump
-  maxFallSpeed: 500,
+  jumpForce: -440,          // Nhảy 1 lần — đủ để vượt pit 192px ở tốc độ Hanoi
+  kaizenJumpForce: -560,    // Super jump (Kaizen mode) — cao hơn một chút
+  doubleJumpFactor: 0.80,   // Double jump force = jumpForce * factor
+  maxFallSpeed: 600,        // px/s — giới hạn tốc độ rơi tối đa
   crouchHeightRatio: 0.55,
   
   // Wings / flight parameters
   flightLift: -12,
   flightMaxVy: -200,
   flightFallControl: 0.35,
+  flightSpeed: 260,         // px/s khi bay lên/xuống bằng nút
   
   // Jump Feel System constants
-  COYOTE_TIME_MS: 120,      // 120ms để nhảy sau khi rời mép vực (Coyote Time)
-  JUMP_BUFFER_MS: 150,      // 150ms buffer nếu nhấn nhảy trước khi chạm đất
-  JUMP_DAMPING_RATIO: 0.45, // Hệ số giảm velo/frame khi nhả phím nhảy sớm
+  COYOTE_TIME_MS: 130,      // 130ms coyote time — rộng hơn một chút
+  JUMP_BUFFER_MS: 160,      // 160ms jump buffer — dễ nhảy hơn khi lag nhẹ
+  JUMP_DAMPING_RATIO: 0.55, // Hệ số giảm velo/frame khi nhả phím nhảy sớm (0.55 = mượt hơn 0.45)
 
   // Power-up durations (in milliseconds)
   shieldDuration: 10000, // 10s
-  wingsDuration: 10000,  // 10s
+  wingsDuration:  10000, // 10s
   kaizenDuration: 8000,  // 8s
-  shootCooldown: 300,    // 300ms
+  shootCooldown:  250,   // 250ms — bắn nhanh hơn một chút cho feel tốt hơn
   
   // Energy accumulation
   energyPerSecond: 5,   // +5%/sec
   energyPerFlask: 10,   // +10%/flask
   energyPerBug: 10,     // +10%/bug stomp or shoot
+
+  // Max enemy count on screen (tối ưu performance)
+  maxEnemiesOnScreen: 8,
 };
 
 export const SCORE_RULES = {

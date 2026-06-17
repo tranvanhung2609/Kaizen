@@ -9,7 +9,7 @@ import { extractDeptFromName } from '@/lib/profile';
 export const revalidate = 0;
 
 interface LeaderboardPageProps {
-  searchParams: Promise<{ tab?: string; scope?: string }>;
+  searchParams: Promise<{ tab?: string; scope?: string; highlight?: string }>;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -61,6 +61,7 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
   const params = await searchParams;
   const currentTab   = (params.tab   || 'overall') as 'overall' | 'hanoi' | 'tokyo' | 'danang';
   const currentScope = (params.scope || 'personal') as 'personal' | 'department' | 'vti';
+  const highlightUserId = params.highlight || '';
 
   // ── 1. Load current user's profile ──────────────────────────────────────────
   let dbProfile = {
@@ -276,6 +277,7 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
           playerRows={playerRows}
           deptRows={deptRows}
           userId={user.id}
+          highlightUserId={highlightUserId}
         />
       </main>
     </div>
