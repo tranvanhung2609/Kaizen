@@ -1,0 +1,276 @@
+{
+  "id": "4b2cd9cf-bbe7-4e73-b504-99c46df436ae",
+  "prevId": "f740af8b-7fee-449d-9738-3806f03132c1",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.journey_scores": {
+      "name": "journey_scores",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_score": {
+          "name": "total_score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "hanoi_best_score": {
+          "name": "hanoi_best_score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "tokyo_best_score": {
+          "name": "tokyo_best_score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "danang_best_score": {
+          "name": "danang_best_score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "journey_scores_user_id_profiles_id_fk": {
+          "name": "journey_scores_user_id_profiles_id_fk",
+          "tableFrom": "journey_scores",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "journey_scores_user_id_unique": {
+          "name": "journey_scores_user_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "journey_scores_total_score_check": {
+          "name": "journey_scores_total_score_check",
+          "value": "\"journey_scores\".\"total_score\" >= 0"
+        },
+        "journey_scores_hanoi_best_score_check": {
+          "name": "journey_scores_hanoi_best_score_check",
+          "value": "\"journey_scores\".\"hanoi_best_score\" >= 0"
+        },
+        "journey_scores_tokyo_best_score_check": {
+          "name": "journey_scores_tokyo_best_score_check",
+          "value": "\"journey_scores\".\"tokyo_best_score\" >= 0"
+        },
+        "journey_scores_danang_best_score_check": {
+          "name": "journey_scores_danang_best_score_check",
+          "value": "\"journey_scores\".\"danang_best_score\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.map_runs": {
+      "name": "map_runs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "map_key": {
+          "name": "map_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score": {
+          "name": "score",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "completion_time": {
+          "name": "completion_time",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "boss_cleared": {
+          "name": "boss_cleared",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "map_runs_user_id_profiles_id_fk": {
+          "name": "map_runs_user_id_profiles_id_fk",
+          "tableFrom": "map_runs",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "map_runs_map_key_check": {
+          "name": "map_runs_map_key_check",
+          "value": "\"map_runs\".\"map_key\" IN ('hanoi', 'tokyo', 'danang')"
+        },
+        "map_runs_score_check": {
+          "name": "map_runs_score_check",
+          "value": "\"map_runs\".\"score\" >= 0"
+        },
+        "map_runs_completion_time_check": {
+          "name": "map_runs_completion_time_check",
+          "value": "\"map_runs\".\"completion_time\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.profiles": {
+      "name": "profiles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_name": {
+          "name": "full_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "avatar_url": {
+          "name": "avatar_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "department": {
+          "name": "department",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'user'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "profiles_email_unique": {
+          "name": "profiles_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "profiles_role_check": {
+          "name": "profiles_role_check",
+          "value": "\"profiles\".\"role\" IN ('user', 'admin')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -6,7 +6,6 @@ import {
   integer,
   boolean,
   real,
-  jsonb,
   check,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
@@ -19,14 +18,7 @@ export const profiles = pgTable(
     fullName: text('full_name'),
     avatarUrl: text('avatar_url'),
     department: text('department').default('').notNull(),
-    nickname: text('nickname'),
-    age: integer('age'),
     role: text('role').notNull().default('user'),
-
-    flasks: integer('flasks').default(0).notNull(),
-    ownedSkins: jsonb('owned_skins').$type<string[]>().default([]).notNull(),
-    activeSkin: text('active_skin').default('skin_default').notNull(),
-    activeTitle: text('active_title').default('').notNull(),
 
     createdAt: timestamp('created_at', { withTimezone: true })
       .defaultNow()
@@ -34,29 +26,6 @@ export const profiles = pgTable(
   },
   (table) => ({
     roleCheck: check('profiles_role_check', sql`${table.role} IN ('user', 'admin')`),
-    flasksCheck: check('profiles_flasks_check', sql`${table.flasks} >= 0`),
-  }),
-);
-
-export const gameConfig = pgTable(
-  'game_config',
-  {
-    id: uuid('id').defaultRandom().primaryKey(),
-    mapKey: text('map_key').unique().notNull(),
-    scoringRules: jsonb('scoring_rules').notNull(),
-    difficultyConfig: jsonb('difficulty_config').notNull(),
-    audioConfig: jsonb('audio_config').notNull(),
-    cutsceneConfig: jsonb('cutscene_config').notNull(),
-    culturalMessage: text('cultural_message').notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-  },
-  (table) => ({
-    mapKeyCheck: check(
-      'game_config_map_key_check',
-      sql`${table.mapKey} IN ('hanoi', 'tokyo', 'danang')`,
-    ),
   }),
 );
 
@@ -69,11 +38,6 @@ export const mapRuns = pgTable(
       .notNull(),
     mapKey: text('map_key').notNull(),
     score: integer('score').default(0).notNull(),
-    flasksCollected: integer('flasks_collected').default(0).notNull(),
-    groundBugsDefeated: integer('ground_bugs_defeated').default(0).notNull(),
-    flyingBugsDefeated: integer('flying_bugs_defeated').default(0).notNull(),
-    bossesDefeated: integer('bosses_defeated').default(0).notNull(),
-    heartsRemaining: integer('hearts_remaining').default(0).notNull(),
     completionTime: real('completion_time').notNull(),
     bossCleared: boolean('boss_cleared').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -86,26 +50,6 @@ export const mapRuns = pgTable(
       sql`${table.mapKey} IN ('hanoi', 'tokyo', 'danang')`,
     ),
     scoreCheck: check('map_runs_score_check', sql`${table.score} >= 0`),
-    flasksCollectedCheck: check(
-      'map_runs_flasks_collected_check',
-      sql`${table.flasksCollected} >= 0`,
-    ),
-    groundBugsDefeatedCheck: check(
-      'map_runs_ground_bugs_defeated_check',
-      sql`${table.groundBugsDefeated} >= 0`,
-    ),
-    flyingBugsDefeatedCheck: check(
-      'map_runs_flying_bugs_defeated_check',
-      sql`${table.flyingBugsDefeated} >= 0`,
-    ),
-    bossesDefeatedCheck: check(
-      'map_runs_bosses_defeated_check',
-      sql`${table.bossesDefeated} >= 0`,
-    ),
-    heartsRemainingCheck: check(
-      'map_runs_hearts_remaining_check',
-      sql`${table.heartsRemaining} >= 0`,
-    ),
     completionTimeCheck: check(
       'map_runs_completion_time_check',
       sql`${table.completionTime} >= 0`,
@@ -170,9 +114,6 @@ export const journeyScoresRelations = relations(journeyScores, ({ one }) => ({
 
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
-
-export type GameConfig = typeof gameConfig.$inferSelect;
-export type NewGameConfig = typeof gameConfig.$inferInsert;
 
 export type MapRun = typeof mapRuns.$inferSelect;
 export type NewMapRun = typeof mapRuns.$inferInsert;

@@ -19,11 +19,6 @@ export async function POST(request: NextRequest) {
     const {
       mapKey,
       score,
-      flasksCollected,
-      groundBugsDefeated,
-      flyingBugsDefeated,
-      bossesDefeated,
-      heartsRemaining,
       completionTime,
       bossCleared,
     } = body;
@@ -34,24 +29,9 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       mapKey,
       score,
-      flasksCollected,
-      groundBugsDefeated,
-      flyingBugsDefeated,
-      bossesDefeated,
-      heartsRemaining,
       completionTime,
       bossCleared,
     }).returning();
-
-    // 4. Update user profile accumulated flasks
-    if (flasksCollected > 0) {
-      await db
-        .update(profiles)
-        .set({
-          flasks: sql`${profiles.flasks} + ${flasksCollected}`,
-        })
-        .where(eq(profiles.id, user.id));
-    }
 
     return NextResponse.json({
       success: true,

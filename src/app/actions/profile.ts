@@ -8,9 +8,6 @@ import { revalidatePath } from 'next/cache';
 
 export async function updateProfile(data: {
   fullName?: string;
-  nickname?: string;
-  age?: number;
-  department?: string;
 }) {
   // Enforce authentication
   const user = await requireAuth();
@@ -19,9 +16,6 @@ export async function updateProfile(data: {
     const updateData: Partial<typeof profiles.$inferInsert> = {};
 
     if (data.fullName !== undefined) updateData.fullName = data.fullName.trim();
-    if (data.nickname !== undefined) updateData.nickname = data.nickname.trim();
-    if (data.age !== undefined) updateData.age = data.age;
-    if (data.department !== undefined) updateData.department = data.department.trim();
 
     // Perform database update
     await db

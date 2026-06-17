@@ -159,8 +159,6 @@ function RunTable({ data }: { data: RunRow[] }) {
             <th className="py-4 px-6">Lượt</th>
             <th className="py-4 px-6">Chặng Chạy</th>
             <th className="py-4 px-6 text-right">Điểm Số</th>
-            <th className="py-4 px-6 text-center hidden sm:table-cell">Bình Nước (Flasks)</th>
-            <th className="py-4 px-6 text-center hidden sm:table-cell">Máu Còn Lại</th>
             <th className="py-4 px-6 text-center hidden md:table-cell">Thời Gian</th>
             <th className="py-4 px-6 text-center hidden md:table-cell">Hạ Boss</th>
             <th className="py-4 px-6 text-right hidden lg:table-cell">Thời Gian Chạy</th>
@@ -193,16 +191,6 @@ function RunTable({ data }: { data: RunRow[] }) {
                     <span className={`px-1.5 py-0.5 rounded text-[8px] font-black border font-mono ${rankBadge.bg} ${rankBadge.border} ${rankBadge.text}`}>
                       {rankBadge.label}
                     </span>
-                  </div>
-                </td>
-                <td className="py-3.5 px-6 text-center hidden sm:table-cell font-mono text-slate-400">
-                  +{run.flasksCollected} 💧
-                </td>
-                <td className="py-3.5 px-6 text-center hidden sm:table-cell">
-                  <div className="flex items-center justify-center gap-0.5">
-                    {[...Array(3)].map((_, i) => (
-                      <span key={i} className={`text-sm leading-none ${i < run.heartsRemaining ? 'text-brand-red' : 'text-slate-700'}`}>♥</span>
-                    ))}
                   </div>
                 </td>
                 <td className="py-3.5 px-6 text-center font-mono text-slate-400 hidden md:table-cell">

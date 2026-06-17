@@ -12,15 +12,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     full_name TEXT,
     avatar_url TEXT,
     department TEXT NOT NULL DEFAULT '',
-    nickname TEXT,
-    age INTEGER,
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
-
-    flasks INTEGER NOT NULL DEFAULT 0,
-    owned_skins JSONB NOT NULL DEFAULT '[]'::jsonb,
-    active_skin TEXT NOT NULL DEFAULT 'skin_default',
-    active_title TEXT NOT NULL DEFAULT '',
-
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
@@ -41,52 +33,7 @@ WITH CHECK (auth.uid() = id);
 
 
 -- =========================================================
--- 2. GAME CONFIG
--- =========================================================
-
-CREATE TABLE IF NOT EXISTS public.game_config (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    map_key TEXT UNIQUE NOT NULL CHECK (map_key IN ('hanoi', 'tokyo', 'danang')),
-    scoring_rules JSONB NOT NULL,
-    difficulty_config JSONB NOT NULL,
-    audio_config JSONB NOT NULL,
-    cutscene_config JSONB NOT NULL,
-    cultural_message TEXT NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
-);
-
-ALTER TABLE public.game_config ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Allow public read access to game_config" ON public.game_config;
-CREATE POLICY "Allow public read access to game_config"
-ON public.game_config
-FOR SELECT
-USING (true);
-
-DROP POLICY IF EXISTS "Allow admins to manage game_config" ON public.game_config;
-CREATE POLICY "Allow admins to manage game_config"
-ON public.game_config
-FOR ALL
-USING (
-    EXISTS (
-        SELECT 1
-        FROM public.profiles p
-        WHERE p.id = auth.uid()
-          AND p.role = 'admin'
-    )
-)
-WITH CHECK (
-    EXISTS (
-        SELECT 1
-        FROM public.profiles p
-        WHERE p.id = auth.uid()
-          AND p.role = 'admin'
-    )
-);
-
-
--- =========================================================
--- 3. MAP RUNS
+-- 2. MAP RUNS
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS public.map_runs (
@@ -94,11 +41,6 @@ CREATE TABLE IF NOT EXISTS public.map_runs (
     user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     map_key TEXT NOT NULL CHECK (map_key IN ('hanoi', 'tokyo', 'danang')),
     score INTEGER DEFAULT 0 NOT NULL CHECK (score >= 0),
-    flasks_collected INTEGER DEFAULT 0 NOT NULL CHECK (flasks_collected >= 0),
-    ground_bugs_defeated INTEGER DEFAULT 0 NOT NULL CHECK (ground_bugs_defeated >= 0),
-    flying_bugs_defeated INTEGER DEFAULT 0 NOT NULL CHECK (flying_bugs_defeated >= 0),
-    bosses_defeated INTEGER DEFAULT 0 NOT NULL CHECK (bosses_defeated >= 0),
-    hearts_remaining INTEGER DEFAULT 0 NOT NULL CHECK (hearts_remaining >= 0),
     completion_time REAL NOT NULL CHECK (completion_time >= 0),
     boss_cleared BOOLEAN DEFAULT FALSE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
@@ -123,7 +65,7 @@ ON public.map_runs(map_key, score DESC, completion_time ASC);
 
 
 -- =========================================================
--- 4. JOURNEY SCORES
+-- 3. JOURNEY SCORES
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS public.journey_scores (
@@ -162,9 +104,19 @@ ON public.journey_scores(total_score DESC);
 
 
 -- =========================================================
--- 5. HANDLE NEW GOOGLE/OAUTH USER
+-- 4. HANDLE NEW GOOGLE/OAUTH USER
 -- =========================================================
 
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+    full_name_val TEXT;
+    dept_val TEXT;
+    match_arr TEXT[];
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Viết lại hàm cụ thể
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -188,11 +140,7 @@ BEGIN
         full_name,
         avatar_url,
         department,
-        role,
-        flasks,
-        owned_skins,
-        active_skin,
-        active_title
+        role
     )
     VALUES (
         new.id,
@@ -200,11 +148,7 @@ BEGIN
         TRIM(full_name_val),
         COALESCE(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture', ''),
         TRIM(dept_val),
-        'user',
-        0,
-        '[]'::jsonb,
-        'skin_default',
-        ''
+        'user'
     )
     ON CONFLICT (id) DO NOTHING;
 
@@ -225,7 +169,7 @@ EXECUTE FUNCTION public.handle_new_user();
 
 
 -- =========================================================
--- 6. AUTO UPDATE JOURNEY SCORES WHEN INSERT MAP RUN
+-- 5. AUTO UPDATE JOURNEY SCORES WHEN INSERT MAP RUN
 -- =========================================================
 
 CREATE OR REPLACE FUNCTION public.update_journey_scores_on_run()

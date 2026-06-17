@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/db';
 import { journeyScores, profiles, mapRuns } from '@/db/schema';
-import { desc, eq, sql } from 'drizzle-orm';
+import { desc, eq, sql, ne, and } from 'drizzle-orm';
 import Navbar from '@/components/Navbar';
 import LeaderboardClient from '@/components/leaderboard/LeaderboardClient';
 
@@ -48,8 +48,6 @@ export interface RunRow {
   mapKey: string;
   mapName: string;
   score: number;
-  flasksCollected: number;
-  heartsRemaining: number;
   completionTime: number;
   bossCleared: boolean;
   playedAt: string; // ISO string
@@ -66,10 +64,9 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
   // ── 1. Load current user's profile ──────────────────────────────────────────
   let dbProfile = {
     id: user.id,
-    email: user.email ?? '',
+    email: user.email,
     fullName: user.user_metadata?.full_name || '',
     avatarUrl: user.user_metadata?.avatar_url || '',
-    age: undefined as number | undefined,
     role: 'user',
   };
   let myDept = '';
@@ -78,7 +75,7 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
     const [profile] = await db
       .select({ id: profiles.id, email: profiles.email, fullName: profiles.fullName,
                 avatarUrl: profiles.avatarUrl, department: profiles.department,
-                age: profiles.age, role: profiles.role })
+                role: profiles.role })
       .from(profiles)
       .where(eq(profiles.id, user.id))
       .limit(1);
@@ -87,7 +84,7 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
       dbProfile = {
         id: profile.id, email: profile.email,
         fullName: profile.fullName || '', avatarUrl: profile.avatarUrl || '',
-        age: profile.age ?? undefined, role: profile.role || 'user',
+        role: profile.role || 'user',
       };
       myDept = profile.department || '';
     }
@@ -115,8 +112,6 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
           id: mapRuns.id,
           mapKey: mapRuns.mapKey,
           score: mapRuns.score,
-          flasksCollected: mapRuns.flasksCollected,
-          heartsRemaining: mapRuns.heartsRemaining,
           completionTime: mapRuns.completionTime,
           bossCleared: mapRuns.bossCleared,
           createdAt: mapRuns.createdAt,
@@ -131,8 +126,6 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
         mapKey: r.mapKey,
         mapName: mapNameMap[r.mapKey] || r.mapKey,
         score: r.score,
-        flasksCollected: r.flasksCollected,
-        heartsRemaining: r.heartsRemaining,
         completionTime: r.completionTime,
         bossCleared: r.bossCleared,
         playedAt: r.createdAt.toISOString(),
@@ -158,7 +151,12 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
         })
         .from(profiles)
         .leftJoin(journeyScores, eq(profiles.id, journeyScores.userId))
-        .where(myDept ? eq(profiles.department, myDept) : sql`1=1`)
+        .where(
+          and(
+            ne(profiles.role, 'admin'),
+            myDept ? eq(profiles.department, myDept) : sql`1=1`
+          )
+        )
         .orderBy(
           currentTab === 'hanoi'  ? desc(sql`COALESCE(${journeyScores.hanoiBestScore}, 0)`) :
           currentTab === 'tokyo'  ? desc(sql`COALESCE(${journeyScores.tokyoBestScore}, 0)`) :
@@ -197,6 +195,7 @@ export default async function LeaderboardPage({ searchParams }: LeaderboardPageP
         })
         .from(profiles)
         .leftJoin(journeyScores, eq(profiles.id, journeyScores.userId))
+        .where(ne(profiles.role, 'admin'))
         .limit(500);
 
       // Aggregate by department

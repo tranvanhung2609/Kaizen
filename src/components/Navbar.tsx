@@ -71,7 +71,7 @@ export default function Navbar({ user, department = '', compact = false }: Navba
                 href="/admin"
                 className="text-sm font-semibold tracking-wide text-slate-300 hover:text-brand-cyan hover:text-glow-cyan transition-all duration-200"
               >
-                ⚙️ CẤU HÌNH CMS
+                ⚙️ QUẢN TRỊ
               </Link>
             )}
           </nav>
@@ -134,8 +134,6 @@ export default function Navbar({ user, department = '', compact = false }: Navba
         onClose={() => setIsModalOpen(false)}
         initialProfile={{
           fullName: user.fullName,
-          age: user.age,
-          department: department,
           email: user.email,
         }}
       />

@@ -43,30 +43,7 @@ export default function SidePanelRight({
   return (
     <aside className="flex flex-col gap-4 w-full h-full text-xs">
       
-      {/* ── SECTION 1: KAIZEN STORE TRIGGER ──────────────── */}
-      <div className="game-container rounded-xl p-4 flex items-center justify-between border border-slate-800/60 relative overflow-hidden">
-        {/* Glow effect */}
-        <div className="absolute -top-6 -right-6 w-16 h-16 rounded-full bg-brand-cyan/20 blur-xl pointer-events-none" />
-        
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[9px] text-slate-500 uppercase tracking-widest font-mono">Bình nước tích lũy</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xl">💧</span>
-            <span className="font-display text-lg font-black text-brand-cyan text-glow-cyan">
-              {flasksCount}
-            </span>
-          </div>
-        </div>
-
-        <button
-          onClick={onOpenShop}
-          className="px-3 py-1.5 rounded-lg bg-brand-cyan/15 hover:bg-brand-cyan text-brand-cyan hover:text-navy-dark border border-brand-cyan/35 text-[10px] font-extrabold uppercase transition-all tracking-wider shadow-sm"
-        >
-          Cửa hàng
-        </button>
-      </div>
-
-      {/* ── SECTION 2: MINI LEADERBOARD ─────────────────── */}
+      {/* ── SECTION 1: MINI LEADERBOARD ─────────────────── */}
       <div className="game-container rounded-xl p-4 flex flex-col gap-2 border border-slate-800/60">
         <div className="flex justify-between items-center border-b border-slate-800/80 pb-1.5">
           <span className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">Bảng Xếp Hạng Nhanh</span>
@@ -103,47 +80,7 @@ export default function SidePanelRight({
       </div>
 
 
-      {/* ── SECTION 3: DAILY QUESTS ─────────────────────── */}
-      <div className="game-container rounded-xl p-4 flex flex-col gap-2.5 border border-slate-800/60">
-        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-mono border-b border-slate-800/80 pb-1.5">
-          Nhiệm Vụ Hàng Ngày
-        </span>
-
-        <div className="flex flex-col gap-2.5">
-          {quests.map((quest) => {
-            const pct = Math.min(100, Math.floor((quest.current / quest.target) * 100));
-            return (
-              <div key={quest.id} className="flex flex-col gap-1">
-                <div className="flex justify-between items-center">
-                  <span className={`font-semibold ${quest.completed ? 'text-slate-500 line-through' : 'text-slate-200'}`}>
-                    {quest.label}
-                  </span>
-                  <span className="text-[9px] font-mono text-slate-400">
-                    {quest.current}/{quest.target}
-                  </span>
-                </div>
-                
-                {/* Progress bar */}
-                <div className="h-1 bg-navy-dark rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-300 ${
-                      quest.completed ? 'bg-slate-700' : 'bg-brand-cyan'
-                    }`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-
-                <div className="flex justify-between items-center text-[8px] text-slate-500 font-mono">
-                  <span>{quest.completed ? 'Hoàn thành ✓' : 'Đang thực hiện...'}</span>
-                  <span className="text-brand-cyan font-bold">+{quest.reward} 💧</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── SECTION 4: SETTINGS ─────────────────────────── */}
+      {/* ── SECTION 2: SETTINGS ─────────────────────────── */}
       <div className="game-container rounded-xl p-4 flex flex-col gap-3 border border-slate-800/60">
         <span className="text-[10px] text-slate-500 uppercase tracking-widest font-mono border-b border-slate-800/80 pb-1.5">
           Tùy Chỉnh Cabinet

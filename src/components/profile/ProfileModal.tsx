@@ -8,13 +8,9 @@ interface ProfileModalProps {
   onClose: () => void;
   initialProfile: {
     fullName?: string;
-    age?: number;
-    department?: string;
     email?: string;
   };
 }
-
-
 
 export default function ProfileModal({
   isOpen,
@@ -22,8 +18,6 @@ export default function ProfileModal({
   initialProfile,
 }: ProfileModalProps) {
   const [fullName, setFullName] = useState(initialProfile.fullName || '');
-  const [age, setAge] = useState(initialProfile.age?.toString() || '');
-  const [department, setDepartment] = useState(initialProfile.department || '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,18 +36,9 @@ export default function ProfileModal({
       return;
     }
 
-    const parsedAge = parseInt(age);
-    if (isNaN(parsedAge) || parsedAge <= 0 || parsedAge > 120) {
-      setError('Vui lòng nhập tuổi hợp lệ (1 - 120).');
-      setIsLoading(false);
-      return;
-    }
-
     try {
       const res = await updateProfile({
         fullName: trimmedFullName,
-        age: parsedAge,
-        department,
       });
 
       if (res.success) {
@@ -128,40 +113,6 @@ export default function ProfileModal({
               placeholder="VD: Nguyễn Văn A"
               className="w-full px-4 py-2.5 rounded-xl bg-navy-dark border border-brand-cyan/40 text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/30 transition-colors"
             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Age */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">
-                Tuổi *
-              </label>
-              <input
-                type="number"
-                required
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                placeholder="VD: 25"
-                min={1}
-                max={120}
-                className="w-full px-4 py-2.5 rounded-xl bg-navy-dark border border-slate-700/60 text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/30 transition-colors"
-              />
-            </div>
-
-            {/* Department */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest font-mono mb-1">
-                Bộ phận / Phòng ban
-              </label>
-              <input
-                type="text"
-                required
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                placeholder="VD: VTI.D5"
-                className="w-full px-4 py-2.5 rounded-xl bg-navy-dark border border-slate-700/60 text-white text-sm focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan/30 transition-colors"
-              />
-            </div>
           </div>
 
           {/* Error Message */}

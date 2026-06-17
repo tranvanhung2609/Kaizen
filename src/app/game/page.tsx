@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/db';
 import { profiles, journeyScores } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, ne } from 'drizzle-orm';
 import Navbar from '@/components/Navbar';
 import GameClientWrapper from './GameClientWrapper';
 
@@ -15,8 +15,6 @@ export default async function GamePage() {
     email: user.email,
     fullName: user.user_metadata?.full_name || '',
     avatarUrl: user.user_metadata?.avatar_url || '',
-    nickname: '',
-    age: undefined as number | undefined,
     role: 'user',
   };
   let department = '';
@@ -29,8 +27,6 @@ export default async function GamePage() {
         fullName: profiles.fullName,
         avatarUrl: profiles.avatarUrl,
         department: profiles.department,
-        nickname: profiles.nickname,
-        age: profiles.age,
         role: profiles.role,
       })
       .from(profiles)
@@ -43,8 +39,6 @@ export default async function GamePage() {
         email: profile.email,
         fullName: profile.fullName || '',
         avatarUrl: profile.avatarUrl || '',
-        nickname: profile.nickname || '',
-        age: profile.age ?? undefined,
         role: profile.role || 'user',
       };
       department = profile.department;
@@ -67,6 +61,7 @@ export default async function GamePage() {
       })
       .from(profiles)
       .innerJoin(journeyScores, eq(profiles.id, journeyScores.userId))
+      .where(ne(profiles.role, 'admin'))
       .orderBy(desc(journeyScores.totalScore))
       .limit(5);
 

@@ -8,7 +8,6 @@ import CutsceneOverlay from '@/components/game/CutsceneOverlay';
 import MapJourneyPanel from '@/components/game/MapJourneyPanel';
 import ArcadeConsoleFrame from '@/components/game/ArcadeConsoleFrame';
 import SidePanelRight from '@/components/game/SidePanelRight';
-import KaizenStoreModal from '@/components/game/KaizenStoreModal';
 import MapSelectionModal from '@/components/game/MapSelectionModal';
 import SkillsModal from '@/components/game/SkillsModal';
 
@@ -18,15 +17,6 @@ interface GameDashboardProps {
     email?: string;
   };
   topPlayers: any[];
-}
-
-interface Quest {
-  id: string;
-  label: string;
-  target: number;
-  current: number;
-  reward: number;
-  completed: boolean;
 }
 
 export default function GameDashboard({ userDetails, topPlayers }: GameDashboardProps) {
@@ -54,43 +44,21 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
   const [isGameOver, setIsGameOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redesign additional states
-  const [flasksCount, setFlasksCount] = useState(0);
-  const [isShopOpen, setIsShopOpen] = useState(false);
+  // Redesign additional states (Configs are hardcoded)
+  const flasksCount = 0;
+  const quests: any[] = [];
+  const activeSkin = 'skin_default';
+  const activeTitle = '';
+  
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isSkillsModalOpen, setIsSkillsModalOpen] = useState(false);
   const [isCrtActive, setIsCrtActive] = useState(true);
   const [isScanlinesActive, setIsScanlinesActive] = useState(true);
   const [isSoundMuted, setIsSoundMuted] = useState(false);
-  const [ownedItems, setOwnedItems] = useState<string[]>([]);
-  const [activeSkin, setActiveSkin] = useState('skin_default');
-  const [activeTitle, setActiveTitle] = useState('');
   const [activeGender, setActiveGender] = useState('male');
-
-  const [quests, setQuests] = useState<Quest[]>([
-    { id: 'collect_flasks', label: '💧 Thu thập 15 bình nước', target: 15, current: 0, reward: 20, completed: false },
-    { id: 'defeat_bugs', label: '👾 Tiêu diệt 5 Bug', target: 5, current: 0, reward: 30, completed: false },
-    { id: 'kaizen_energy', label: '⚡ Đạt 100% Kaizen Energy', target: 1, current: 0, reward: 15, completed: false },
-  ]);
 
   // Load properties on mount
   useEffect(() => {
-    async function loadStoreData() {
-      try {
-        const response = await fetch('/api/user/store');
-        if (response.ok) {
-          const data = await response.json();
-          setFlasksCount(data.flasks);
-          setOwnedItems(data.ownedSkins || []);
-          setActiveSkin(data.activeSkin || 'skin_default');
-          setActiveTitle(data.activeTitle || '');
-        }
-      } catch (err) {
-        console.error('Failed to load store data from API:', err);
-      }
-    }
-    loadStoreData();
-
     if (typeof window !== 'undefined') {
       const storedCrt = localStorage.getItem('vj_settings_crt');
       if (storedCrt !== null) setIsCrtActive(storedCrt === 'true');
@@ -126,127 +94,6 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
     setActiveGender(val);
     localStorage.setItem('vj_settings_gender', val);
   };
-
-  const handleBuyItem = async (cost: number, itemId: string, itemType: 'skin' | 'title') => {
-    try {
-      const response = await fetch('/api/user/store/buy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId, cost }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setFlasksCount(data.flasks);
-        setOwnedItems(data.ownedSkins);
-      } else {
-        const err = await response.json();
-        alert(err.error || 'Mua vật phẩm thất bại!');
-      }
-    } catch (err) {
-      console.error('Error buying item:', err);
-    }
-  };
-
-  const handleEquipItem = async (itemId: string, itemType: 'skin' | 'title') => {
-    try {
-      const isCurrentlyEquipped = itemType === 'skin' ? activeSkin === itemId : activeTitle === itemId;
-      const targetItemId = (itemType === 'title' && isCurrentlyEquipped) ? '' : itemId;
-
-      const response = await fetch('/api/user/store/equip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId: targetItemId, itemType }),
-      });
-      if (response.ok) {
-        if (itemType === 'skin') {
-          setActiveSkin(targetItemId);
-        } else {
-          setActiveTitle(targetItemId);
-        }
-      } else {
-        const err = await response.json();
-        alert(err.error || 'Trang bị thất bại!');
-      }
-    } catch (err) {
-      console.error('Error equipping item:', err);
-    }
-  };
-
-  const claimQuestReward = async (questId: string, reward: number) => {
-    try {
-      const response = await fetch('/api/user/store/reward', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questId, reward }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setFlasksCount(data.flasks);
-      }
-    } catch (err) {
-      console.error('Failed to claim quest reward:', err);
-    }
-  };
-
-  // Score & energy trackers for Daily Quests
-  const prevScoreRef = useRef(0);
-  const prevEnergyRef = useRef(0);
-
-  useEffect(() => {
-    // Check if game restarted or respawned
-    if (hudState.score === 0 || hudState.score < prevScoreRef.current) {
-      prevScoreRef.current = hudState.score;
-      prevEnergyRef.current = hudState.energy;
-      // Reset quest progress for the current run
-      setQuests((prev) =>
-        prev.map((q) => (q.id !== 'kaizen_energy' ? { ...q, current: 0, completed: false } : q))
-      );
-      return;
-    }
-
-    const diff = hudState.score - prevScoreRef.current;
-    if (diff > 0) {
-      prevScoreRef.current = hudState.score;
-
-      setQuests((prevQuests) => {
-        return prevQuests.map((q) => {
-          if (q.completed) return q;
-
-          let newCurrent = q.current;
-          if (q.id === 'collect_flasks' && diff === 50) {
-            newCurrent = Math.min(q.target, q.current + 1);
-            setFlasksCount((prevFlasks) => {
-              const updated = prevFlasks + 1;
-              return updated;
-            });
-          } else if (q.id === 'defeat_bugs' && (diff === 150 || diff === 200)) {
-            newCurrent = Math.min(q.target, q.current + 1);
-          }
-
-          const completed = newCurrent >= q.target;
-          if (completed && !q.completed) {
-            claimQuestReward(q.id, q.reward);
-          }
-
-          return { ...q, current: newCurrent, completed };
-        });
-      });
-    }
-
-    // Check Energy complete
-    if (hudState.energy >= 100 && prevEnergyRef.current < 100) {
-      setQuests((prevQuests) =>
-        prevQuests.map((q) => {
-          if (q.id === 'kaizen_energy' && !q.completed) {
-            claimQuestReward(q.id, q.reward);
-            return { ...q, current: 1, completed: true };
-          }
-          return q;
-        })
-      );
-    }
-    prevEnergyRef.current = hudState.energy;
-  }, [hudState.score, hudState.energy]);
 
   const handleSelectMap = useCallback((mapKey: string) => {
     if (gameRef.current) {
@@ -311,11 +158,6 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
           userId: userDetails.id,
           mapKey: currentMapKey,
           score: stats.score,
-          flasksCollected: stats.flasksCollected,
-          groundBugsDefeated: Math.floor(Math.random() * 5) + 3,
-          flyingBugsDefeated: Math.floor(Math.random() * 4) + 2,
-          bossesDefeated: 1,
-          heartsRemaining: stats.heartsRemaining,
           completionTime: stats.gameTime,
           bossCleared: true,
         }),
@@ -445,7 +287,7 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
       <div className="hidden xl:flex w-56 2xl:w-64 shrink-0 flex-col gap-3">
         <SidePanelRight
           flasksCount={flasksCount}
-          onOpenShop={() => setIsShopOpen(true)}
+          onOpenShop={() => {}}
           quests={quests}
           isCrtActive={isCrtActive}
           setIsCrtActive={handleSetCrt}
@@ -458,18 +300,6 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
           topPlayers={topPlayers}
         />
       </div>
-
-      {/* KAIZEN SHOP MODAL */}
-      <KaizenStoreModal
-        isOpen={isShopOpen}
-        onClose={() => setIsShopOpen(false)}
-        flasksCount={flasksCount}
-        ownedItems={ownedItems}
-        activeSkin={activeSkin}
-        activeTitle={activeTitle}
-        onBuyItem={handleBuyItem}
-        onEquipItem={handleEquipItem}
-      />
 
       {/* MAP SELECTION MODAL */}
       <MapSelectionModal

@@ -1,8 +1,8 @@
 import { requireAuth } from '@/lib/auth';
 import Navbar from '@/components/Navbar';
-import AdminDashboardTabs from '@/components/admin/AdminDashboardTabs';
+import AdminScoreManager from '@/components/admin/AdminScoreManager';
 import { db } from '@/db';
-import { gameConfig, profiles, journeyScores } from '@/db/schema';
+import { profiles, journeyScores } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 
@@ -11,14 +11,12 @@ export const revalidate = 0; // Dynamic rendering
 export default async function AdminPage() {
   const user = await requireAuth();
 
-  // Try to load the user's profile to extract details and verify role
+  // Load the current user's profile to check their role
   let dbProfile = {
     id: user.id,
     email: user.email,
     fullName: user.user_metadata?.full_name || '',
     avatarUrl: user.user_metadata?.avatar_url || '',
-    nickname: '',
-    age: undefined as number | undefined,
     role: 'user',
   };
   let department = '';
@@ -31,8 +29,6 @@ export default async function AdminPage() {
         fullName: profiles.fullName,
         avatarUrl: profiles.avatarUrl,
         department: profiles.department,
-        nickname: profiles.nickname,
-        age: profiles.age,
         role: profiles.role,
       })
       .from(profiles)
@@ -45,14 +41,12 @@ export default async function AdminPage() {
         email: profile.email,
         fullName: profile.fullName || '',
         avatarUrl: profile.avatarUrl || '',
-        nickname: profile.nickname || '',
-        age: profile.age ?? undefined,
         role: profile.role || 'user',
       };
       department = profile.department;
     }
   } catch (err) {
-    console.error('Failed to load profile from DB for admin page checking:', err);
+    console.error('Failed to load profile for admin page checking:', err);
   }
 
   // Security guard: Only role === 'admin' can access
@@ -60,15 +54,7 @@ export default async function AdminPage() {
     redirect('/game');
   }
 
-  // Fetch initial game configs
-  let initialConfigs: any[] = [];
-  try {
-    initialConfigs = await db.select().from(gameConfig);
-  } catch (err) {
-    console.error('Failed to load game config from DB:', err);
-  }
-
-  // Fetch all user scores & profiles
+  // Fetch all user scores & profiles (including admins so we can manage all accounts, but mostly normal users)
   let userScores: any[] = [];
   try {
     userScores = await db
@@ -77,7 +63,6 @@ export default async function AdminPage() {
         email: profiles.email,
         fullName: profiles.fullName,
         department: profiles.department,
-        age: profiles.age,
         role: profiles.role,
         totalScore: journeyScores.totalScore,
         hanoiBestScore: journeyScores.hanoiBestScore,
@@ -97,19 +82,19 @@ export default async function AdminPage() {
 
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 flex flex-col gap-6 relative">
         {/* Background glowing orb */}
-        <div className="absolute top-1/4 right-1/4 translate-x-1/2 w-[350px] h-[350px] rounded-full bg-brand-red-glow/5 blur-[100px] pointer-events-none" />
+        <div className="absolute top-1/4 right-1/4 translate-x-1/2 w-[350px] h-[350px] rounded-full bg-brand-cyan/5 blur-[100px] pointer-events-none" />
 
         <div className="flex flex-col gap-1.5 z-10">
           <h1 className="text-3xl font-extrabold font-display text-white tracking-wide uppercase">
             HỆ THỐNG QUẢN TRỊ KAIZEN JOURNEY
           </h1>
           <p className="text-sm text-slate-400">
-            Xem và cấu hình các chỉ số game, theo dõi xếp hạng của chiến binh và thống kê hiệu suất theo từng phòng ban VTI.
+            Xem, tìm kiếm và điều chỉnh trực tiếp điểm số của các chiến binh VTI chặng đường 9 năm Adventure.
           </p>
         </div>
 
         <div className="z-10">
-          <AdminDashboardTabs initialConfigs={initialConfigs} userScores={userScores} />
+          <AdminScoreManager initialUserScores={userScores} />
         </div>
       </main>
     </div>
