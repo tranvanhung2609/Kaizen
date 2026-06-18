@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { isVtiEmail } from '@/lib/auth';
+import { ensureProfileExists } from '@/lib/profile';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -22,6 +23,18 @@ export async function GET(request: Request) {
           // Log out immediately and return error if domain check fails
           await supabase.auth.signOut();
           return NextResponse.redirect(`${origin}/login?error=invalid_domain`);
+        }
+
+        // Đảm bảo profile & journey_scores tồn tại trong database ngay khi đăng nhập
+        try {
+          await ensureProfileExists(
+            user.id,
+            user.email || '',
+            user.user_metadata?.full_name || '',
+            user.user_metadata?.avatar_url || ''
+          );
+        } catch (profileErr) {
+          console.error('[auth-callback] Failed to ensure profile exists:', profileErr);
         }
       }
       

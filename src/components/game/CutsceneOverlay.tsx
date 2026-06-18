@@ -123,11 +123,37 @@ export default function CutsceneOverlay({
             {hasRevives ? 'FATAL: NULL_POINTER_EXCEPTION' : 'CRITICAL: RECOVERY_FAILED'}
           </div>
 
-          <p style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.7, marginBottom: 28 }}>
+          <p style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.7, marginBottom: 20 }}>
             {hasRevives 
               ? `Hệ thống gặp sự cố nghiêm trọng! Bạn còn ${revivesLeft} lượt hồi sinh tại Checkpoint để tiếp tục hành trình.`
               : 'Bạn đã thất bại 3 lần liên tiếp! Không thể tiếp tục phục hồi từ checkpoint và bắt buộc phải re-build từ điểm xuất phát.'}
           </p>
+
+          {/* Nếu hết lượt, hiển thị điểm số tích lũy và xếp hạng */}
+          {!hasRevives && (
+            <div style={{ marginBottom: 24 }}>
+              {isSubmitting && !rankResult && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  padding: '12px 16px',
+                  borderRadius: 14,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  marginBottom: 14,
+                }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid #ff9500', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ color: '#64748b', fontSize: 11, fontFamily: 'monospace' }}>Đang ghi nhận điểm số...</span>
+                </div>
+              )}
+
+              {rankResult && (
+                <RankBadge rank={rankResult.rank} totalPlayers={rankResult.totalPlayers} totalScore={rankResult.totalScore} color="#ff9500" />
+              )}
+            </div>
+          )}
 
           {hasRevives ? (
             <button
@@ -147,17 +173,21 @@ export default function CutsceneOverlay({
           ) : (
             <button
               onClick={onRestartFromBeginning}
+              disabled={isSubmitting && !isSaved}
               style={{
-                width: '100%', background: 'linear-gradient(135deg, #ff9500, #ff8500)',
-                color: '#070913', border: 'none', borderRadius: 12, padding: '14px 24px',
-                fontWeight: 800, fontSize: 14, cursor: 'pointer', letterSpacing: 1,
+                width: '100%', background: (isSubmitting && !isSaved) 
+                  ? 'rgba(255,255,255,0.06)' 
+                  : 'linear-gradient(135deg, #ff9500, #ff8500)',
+                color: (isSubmitting && !isSaved) ? '#475569' : '#070913', 
+                border: 'none', borderRadius: 12, padding: '14px 24px',
+                fontWeight: 800, fontSize: 14, cursor: (isSubmitting && !isSaved) ? 'not-allowed' : 'pointer', letterSpacing: 1,
                 transition: 'transform 0.15s, box-shadow 0.15s',
-                boxShadow: '0 4px 24px rgba(255,149,0,0.4)',
+                boxShadow: (isSubmitting && !isSaved) ? 'none' : '0 4px 24px rgba(255,149,0,0.4)',
               }}
-              onMouseEnter={e => { (e.currentTarget as any).style.transform = 'scale(1.03)'; }}
-              onMouseLeave={e => { (e.currentTarget as any).style.transform = 'scale(1)'; }}
+              onMouseEnter={e => { if (isSaved || (!isSubmitting)) (e.currentTarget as any).style.transform = 'scale(1.03)'; }}
+              onMouseLeave={e => { if (isSaved || (!isSubmitting)) (e.currentTarget as any).style.transform = 'scale(1)'; }}
             >
-              ⚠️ BẮT ĐẦU LẠI TỪ ĐẦU
+              {isSubmitting && !isSaved ? 'ĐANG LƯU ĐIỂM...' : '⚠️ BẮT ĐẦU LẠI TỪ ĐẦU'}
             </button>
           )}
         </div>
@@ -375,13 +405,21 @@ export default function CutsceneOverlay({
           {/* Header badge */}
           <div style={{ textAlign: 'center', marginBottom: 18 }}>
             <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 16px',
-              borderRadius: 999, background: `${meta.color}18`, border: `1px solid ${meta.color}40`,
-              color: meta.color, fontSize: 10, fontWeight: 700, letterSpacing: 3,
+              display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 18px',
+              borderRadius: 999, background: 'rgba(255,215,0,0.15)', border: '1px solid #ffd700',
+              color: '#ffd700', fontSize: 11, fontWeight: 800, letterSpacing: 3,
               textTransform: 'uppercase', fontFamily: 'monospace',
               marginBottom: 14,
+              boxShadow: '0 0 15px rgba(255,215,0,0.3)',
             }}>
-              {meta.emoji} MISSION ACCOMPLISHED — {meta.label.toUpperCase()} {meta.emoji}
+              🎉 TIÊU DIỆT BOSS THÀNH CÔNG 🎉
+            </div>
+
+            <div style={{
+              fontSize: 10, color: meta.color, letterSpacing: 2, fontWeight: 700,
+              textTransform: 'uppercase', marginBottom: 10, fontFamily: 'monospace'
+            }}>
+              {meta.emoji} CHẶNG ĐƯỜNG {meta.label.toUpperCase()} HOÀN TẤT {meta.emoji}
             </div>
 
             <h2 style={{
@@ -436,34 +474,84 @@ export default function CutsceneOverlay({
             <p style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.65, margin: 0 }}>{vtiMsg}</p>
           </div>
 
-          {/* CTA Button */}
-          <button
-            onClick={onNextMap}
-            disabled={isSubmitting && !isSaved}
-            style={{
-              width: '100%',
-              background: (isSubmitting && !isSaved)
-                ? 'rgba(255,255,255,0.06)'
-                : `linear-gradient(135deg, ${meta.color}, ${currentMapKey === 'danang' ? '#00c9ff' : '#0054a6'})`,
-              color: (isSubmitting && !isSaved) ? '#475569' : (currentMapKey === 'danang' ? '#001a10' : '#fff'),
-              border: `1px solid ${(isSubmitting && !isSaved) ? 'rgba(255,255,255,0.08)' : meta.color + '60'}`,
-              borderRadius: 14, padding: '14px 24px',
-              fontWeight: 800, fontSize: 14, cursor: (isSubmitting && !isSaved) ? 'not-allowed' : 'pointer',
-              letterSpacing: 1, transition: 'transform 0.15s, box-shadow 0.15s',
-              boxShadow: (isSubmitting && !isSaved) ? 'none' : `0 4px 28px ${meta.glow}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            }}
-            onMouseEnter={e => { if (isSaved) (e.currentTarget as any).style.transform = 'scale(1.02)'; }}
-            onMouseLeave={e => { (e.currentTarget as any).style.transform = 'scale(1)'; }}
-          >
-            {isSubmitting && !isSaved ? (
-              <><div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid #475569', borderTopColor: '#94a3b8', animation: 'spin 0.8s linear infinite' }} /> Đang lưu điểm...</>
-            ) : isFinalMap ? (
-              <>🏆 Xem Bảng Xếp Hạng VTI</>
-            ) : (
-              <>{meta.nextLabel} →</>
-            )}
-          </button>
+          {/* Hướng dẫn và Nút lựa chọn */}
+          <div style={{
+            fontSize: 11,
+            color: '#64748b',
+            lineHeight: 1.6,
+            textAlign: 'center',
+            marginBottom: 18,
+            fontStyle: 'italic',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            paddingTop: 12
+          }}>
+            ℹ️ <strong>Hướng dẫn:</strong> Chọn <strong>TIẾP TỤC HÀNH TRÌNH</strong> để mở khóa map tiếp theo, hoặc chọn <strong>CHƠI LẠI MAP</strong> để vượt qua kỷ lục điểm số hiện tại của bạn.
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            {/* Chơi lại Map */}
+            <button
+              onClick={onRestartFromBeginning}
+              disabled={isSubmitting && !isSaved}
+              style={{
+                flex: 1,
+                background: 'rgba(255,255,255,0.05)',
+                color: '#fff',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 14,
+                padding: '14px 16px',
+                fontWeight: 800,
+                fontSize: 13,
+                cursor: (isSubmitting && !isSaved) ? 'not-allowed' : 'pointer',
+                letterSpacing: 0.5,
+                transition: 'background 0.2s, transform 0.1s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+              }}
+              onMouseEnter={e => { if (isSaved || !isSubmitting) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.1)'; (e.currentTarget as any).style.transform = 'scale(1.02)'; } }}
+              onMouseLeave={e => { if (isSaved || !isSubmitting) { (e.currentTarget as any).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as any).style.transform = 'scale(1)'; } }}
+            >
+              🔄 CHƠI LẠI MAP
+            </button>
+
+            {/* Đi tiếp */}
+            <button
+              onClick={onNextMap}
+              disabled={isSubmitting && !isSaved}
+              style={{
+                flex: 1.2,
+                background: (isSubmitting && !isSaved)
+                  ? 'rgba(255,255,255,0.06)'
+                  : `linear-gradient(135deg, ${meta.color}, ${currentMapKey === 'danang' ? '#00c9ff' : '#0054a6'})`,
+                color: (isSubmitting && !isSaved) ? '#475569' : (currentMapKey === 'danang' ? '#001a10' : '#fff'),
+                border: `1px solid ${(isSubmitting && !isSaved) ? 'rgba(255,255,255,0.08)' : meta.color + '60'}`,
+                borderRadius: 14,
+                padding: '14px 16px',
+                fontWeight: 800,
+                fontSize: 13,
+                cursor: (isSubmitting && !isSaved) ? 'not-allowed' : 'pointer',
+                letterSpacing: 0.5,
+                transition: 'transform 0.15s, box-shadow 0.15s',
+                boxShadow: (isSubmitting && !isSaved) ? 'none' : `0 4px 28px ${meta.glow}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+              }}
+              onMouseEnter={e => { if (isSaved || !isSubmitting) (e.currentTarget as any).style.transform = 'scale(1.02)'; }}
+              onMouseLeave={e => { if (isSaved || !isSubmitting) (e.currentTarget as any).style.transform = 'scale(1)'; }}
+            >
+              {isSubmitting && !isSaved ? (
+                <><div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #475569', borderTopColor: '#94a3b8', animation: 'spin 0.8s linear infinite' }} /> Lưu điểm...</>
+              ) : isFinalMap ? (
+                <>🏆 XẾP HẠNG</>
+              ) : (
+                <>{currentMapKey === 'hanoi' ? '🇯🇵 TOKYO →' : '🌊 ĐÀ NẴNG →'}</>
+              )}
+            </button>
+          </div>
         </div>
 
         <style>{`

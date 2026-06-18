@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { resetUserScoreAction, updateUserScoreAction } from '@/app/actions/admin';
-import { extractDeptFromName } from '@/lib/profile';
+import { extractDeptFromName } from '@/lib/profile-utils';
 
 interface UserScore {
   id: string;

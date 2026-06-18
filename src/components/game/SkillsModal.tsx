@@ -23,7 +23,7 @@ const SKILLS: Skill[] = [
   {
     name: 'Tab/Enter Projectiles',
     category: 'special',
-    control: ['SPACE'],
+    control: ['SPACE', 'Z'],
     description: 'Bắn ra các phím cơ khí Tab và Enter với tốc độ cao để tiêu diệt các Bug và tấn công Boss.',
     effect: 'Phá hủy Staging/Prod Bugs từ xa, trừ máu của Boss.',
     icon: '⌨️',
@@ -56,9 +56,9 @@ const SKILLS: Skill[] = [
   {
     name: 'Kaizen Mode Keyboard',
     category: 'special',
-    control: ['Tự kích hoạt'],
-    description: 'Bàn phím cơ Kaizen tối thượng tự động kích hoạt khi tích lũy đủ 100% năng lượng Kaizen (nhặt nước hoặc tiêu diệt Bug).',
-    effect: 'Gia tăng tốc độ chạy gấp 1.5 lần, nhảy cực cao, cho phép bắn đạn liên tục.',
+    control: ['SPACE khi Energy = 100%'],
+    description: 'Bàn phím cơ Kaizen tối thượng được kích hoạt thủ công bằng phím SPACE khi tích lũy đủ 100% năng lượng Kaizen (nhặt nước hoặc tiêu diệt Bug).',
+    effect: 'Gia tăng tốc độ chạy gấp 1.2 lần, nhảy cực cao, cho phép bắn đạn liên tục.',
     icon: '⚡',
     colorCls: 'text-gold',
     glowCls: 'text-glow-gold',

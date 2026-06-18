@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { db } from '@/db';
 import { mapRuns, journeyScores } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
+import { ensureProfileExists } from '@/lib/profile';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +14,19 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Đảm bảo profile và journey_score tồn tại trước khi chèn map_runs để tránh lỗi FK
+    try {
+      await ensureProfileExists(
+        user.id,
+        user.email || '',
+        user.user_metadata?.full_name || '',
+        user.user_metadata?.avatar_url || ''
+      );
+    } catch (profileErr) {
+      console.error('[submit-run] Failed to ensure profile exists:', profileErr);
+    }
+
 
     // 2. Parse request payload
     const body = await request.json();
@@ -33,7 +47,65 @@ export async function POST(request: NextRequest) {
       bossCleared: bossCleared ?? true,
     }).returning();
 
-    // 4. Query rank player sau khi trigger chạy (trigger sync trong same txn)
+    // 3.1. Cập nhật journey_scores trực tiếp (Application-level fallback phòng ngừa thiếu DB trigger)
+    const runScore = score || 0;
+    const runMapKey = mapKey || 'hanoi';
+
+    try {
+      const [existingScores] = await db
+        .select()
+        .from(journeyScores)
+        .where(eq(journeyScores.userId, user.id))
+        .limit(1);
+
+      if (existingScores) {
+        let hanoiBest = existingScores.hanoiBestScore;
+        let tokyoBest = existingScores.tokyoBestScore;
+        let danangBest = existingScores.danangBestScore;
+
+        if (runMapKey === 'hanoi') {
+          hanoiBest = Math.max(hanoiBest, runScore);
+        } else if (runMapKey === 'tokyo') {
+          tokyoBest = Math.max(tokyoBest, runScore);
+        } else if (runMapKey === 'danang') {
+          danangBest = Math.max(danangBest, runScore);
+        }
+
+        const totalScore = hanoiBest + tokyoBest + danangBest;
+
+        await db
+          .update(journeyScores)
+          .set({
+            hanoiBestScore: hanoiBest,
+            tokyoBestScore: tokyoBest,
+            danangBestScore: danangBest,
+            totalScore: totalScore,
+            updatedAt: new Date(),
+          })
+          .where(eq(journeyScores.userId, user.id));
+      } else {
+        const hanoiVal = runMapKey === 'hanoi' ? runScore : 0;
+        const tokyoVal = runMapKey === 'tokyo' ? runScore : 0;
+        const danangVal = runMapKey === 'danang' ? runScore : 0;
+        const totalVal = hanoiVal + tokyoVal + danangVal;
+
+        await db
+          .insert(journeyScores)
+          .values({
+            userId: user.id,
+            hanoiBestScore: hanoiVal,
+            tokyoBestScore: tokyoVal,
+            danangBestScore: danangVal,
+            totalScore: totalVal,
+            updatedAt: new Date(),
+          })
+          .onConflictDoNothing();
+      }
+    } catch (dbErr) {
+      console.error('[submit-run] Failed to update journey_scores programmatically:', dbErr);
+    }
+
+    // 4. Query rank player sau khi trigger chạy hoặc app-level update cập nhật (sync trong same txn/flow)
     let rank = 0;
     let totalPlayers = 0;
     let myTotalScore = score;

@@ -4,7 +4,7 @@ import { journeyScores, profiles, mapRuns } from '@/db/schema';
 import { desc, eq, sql, ne, and } from 'drizzle-orm';
 import Navbar from '@/components/Navbar';
 import LeaderboardClient from '@/components/leaderboard/LeaderboardClient';
-import { extractDeptFromName } from '@/lib/profile';
+import { extractDeptFromName } from '@/lib/profile-utils';
 
 export const revalidate = 0;
 

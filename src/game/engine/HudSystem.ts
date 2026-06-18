@@ -26,6 +26,9 @@ export class HudSystem {
   private lastShieldRemaining = -1;
   private lastWingsRemaining = -1;
   private lastDeathCount = -1;
+  private lastGroundBugsDefeated = -1;
+  private lastFlyingBugsDefeated = -1;
+  private lastFlasksCollected = -1;
 
   /** Khởi tạo reference đến scene. Gọi trong create(). */
   init(scene: Phaser.Scene): void {
@@ -47,6 +50,9 @@ export class HudSystem {
     this.lastShieldRemaining = -1;
     this.lastWingsRemaining = -1;
     this.lastDeathCount = -1;
+    this.lastGroundBugsDefeated = -1;
+    this.lastFlyingBugsDefeated = -1;
+    this.lastFlasksCollected = -1;
   }
 
   // ─── HUD Event Emitter ────────────────────────────────────────────────────
@@ -78,7 +84,10 @@ export class HudSystem {
       cooldownRemaining === this.lastCooldownRemaining &&
       shieldRemaining === this.lastShieldRemaining &&
       wingsRemaining === this.lastWingsRemaining &&
-      deathCount === this.lastDeathCount
+      deathCount === this.lastDeathCount &&
+      state.groundBugsDefeated === this.lastGroundBugsDefeated &&
+      state.flyingBugsDefeated === this.lastFlyingBugsDefeated &&
+      state.flasksCollected === this.lastFlasksCollected
     ) return; // Không thay đổi — bỏ qua
 
     this.lastScore = state.score;
@@ -94,6 +103,9 @@ export class HudSystem {
     this.lastShieldRemaining = shieldRemaining;
     this.lastWingsRemaining = wingsRemaining;
     this.lastDeathCount = deathCount;
+    this.lastGroundBugsDefeated = state.groundBugsDefeated;
+    this.lastFlyingBugsDefeated = state.flyingBugsDefeated;
+    this.lastFlasksCollected = state.flasksCollected;
 
     const mapName =
       mapConfig.mapKey === 'hanoi' ? 'Hà Nội' :
@@ -119,6 +131,11 @@ export class HudSystem {
       shieldRemaining,
       wingsRemaining,
       deathCount,
+      groundBugsDefeated: state.groundBugsDefeated,
+      flyingBugsDefeated: state.flyingBugsDefeated,
+      flasksCollected: state.flasksCollected,
+      // Thêm thông tin boss timer để React vẽ progress bar
+      bossTriggerDelaySec: 60,
     });
   }
 

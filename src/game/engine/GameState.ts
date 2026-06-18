@@ -15,6 +15,9 @@ export interface GameState {
   distance: number;
   kaizenAmmo: number;
   flasksCollected: number; // Added to track total flasks collected in this run
+  groundBugsDefeated: number; // Number of ground bugs defeated
+  flyingBugsDefeated: number; // Number of flying bugs defeated
+  activeEnemyBulletCount: number; // Đạn lính đang bay trên màn hình (để cull hiệu quả)
 
   // Buff timers (absolute timestamp so-with Phaser time.now)
   shieldUntil: number;
@@ -37,6 +40,8 @@ export interface GameState {
   checkpointEnergy: number;
   checkpointX: number;
   checkpointFlasks: number; // Added to save flask count at checkpoint
+  checkpointGroundBugs: number; // Save ground bugs count at checkpoint
+  checkpointFlyingBugs: number; // Save flying bugs count at checkpoint
   bossTriggerX: number;
 
   // Level spawning
@@ -67,6 +72,9 @@ export function createInitialGameState(): GameState {
     distance: 0,
     kaizenAmmo: 0,
     flasksCollected: 0,
+    groundBugsDefeated: 0,
+    flyingBugsDefeated: 0,
+    activeEnemyBulletCount: 0,
 
     shieldUntil: 0,
     wingsUntil: 0,
@@ -85,6 +93,8 @@ export function createInitialGameState(): GameState {
     checkpointEnergy: 0,
     checkpointX: 0,
     checkpointFlasks: 0,
+    checkpointGroundBugs: 0,
+    checkpointFlyingBugs: 0,
     bossTriggerX: 10000,
 
     activePitRanges: [],

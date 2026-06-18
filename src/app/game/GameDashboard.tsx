@@ -41,6 +41,10 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
     shieldRemaining: 0,
     wingsRemaining: 0,
     deathCount: 0,
+    groundBugsDefeated: 0,
+    flyingBugsDefeated: 0,
+    flasksCollected: 0,
+    bossTriggerDelaySec: 60,
   });
 
   const [isPaused, setIsPaused] = useState(false);
@@ -54,8 +58,6 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
   // Flag: đã lưu xong chưa
   const [isSaved, setIsSaved] = useState(false);
 
-  // Redesign additional states (Configs are hardcoded)
-  const flasksCount = 0;
   const quests: any[] = [];
   const activeSkin = 'skin_default';
   const activeTitle = '';
@@ -67,7 +69,30 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
   const [isSoundMuted, setIsSoundMuted] = useState(false);
   const [activeGender, setActiveGender] = useState('male');
 
-  // Load properties on mount
+  // Live leaderboard and personal stats states
+  const [topPlayersList, setTopPlayersList] = useState<any[]>(topPlayers);
+  const [personalBest, setPersonalBest] = useState<any>(null);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+
+  const fetchLeaderboardData = useCallback(async () => {
+    setIsLoadingLeaderboard(true);
+    try {
+      const response = await fetch('/api/game/leaderboard');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setTopPlayersList(data.topPlayers || []);
+          setPersonalBest(data.personalBest || null);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch leaderboard/personal scores:', err);
+    } finally {
+      setIsLoadingLeaderboard(false);
+    }
+  }, []);
+
+  // Load properties on mount & fetch live leaderboard
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedCrt = localStorage.getItem('vj_settings_crt');
@@ -82,7 +107,8 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
       const storedGender = localStorage.getItem('vj_settings_gender');
       if (storedGender !== null) setActiveGender(storedGender);
     }
-  }, []);
+    fetchLeaderboardData();
+  }, [fetchLeaderboardData]);
 
   // Sync settings helper
   const handleSetCrt = (val: boolean) => {
@@ -163,6 +189,7 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
             totalScore: result.totalScore || stats.score,
           });
           setIsSaved(true);
+          fetchLeaderboardData();
         } else {
           // Làm nổi bật lỗi nhưng không block UI
           console.error('[GameDashboard] Auto-save failed:', await response.text());
@@ -179,6 +206,52 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
     autoSave();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapClearData]);
+
+  // ── Tự động lưu điểm khi Game Over thực sự (Hết lượt) ────────────────
+  useEffect(() => {
+    if (!isGameOver || hudState.deathCount < 3 || isSaved || isSubmitting) return;
+
+    const autoSaveGameOver = async () => {
+      setIsSubmitting(true);
+      try {
+        const currentMapKey = hudState.mapKey;
+
+        const response = await fetch('/api/game/submit-run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userDetails.id,
+            mapKey: currentMapKey,
+            score: hudState.score,
+            completionTime: hudState.timeElapsed,
+            bossCleared: false, // Thua cuộc nên bossCleared = false
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setRankResult({
+            rank: result.rank || 0,
+            totalPlayers: result.totalPlayers || 0,
+            totalScore: result.totalScore || hudState.score,
+          });
+          setIsSaved(true);
+          fetchLeaderboardData();
+        } else {
+          console.error('[GameDashboard] Auto-save Game Over failed:', await response.text());
+          setIsSaved(true); // Cho tiếp tục
+        }
+      } catch (err) {
+        console.error('[GameDashboard] Auto-save Game Over error:', err);
+        setIsSaved(true);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    autoSaveGameOver();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGameOver, hudState.deathCount]);
 
   const handleGameOver = useCallback(() => {
     setIsGameOver(true);
@@ -223,10 +296,14 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
     setIsPaused(false);
     setBossIntroData(null);
     setMapClearData(null);
+    setRankResult(null);
+    setIsSaved(false);
     
     if (gameRef.current) {
       const gameScene = gameRef.current.scene.getScene('GameScene');
       if (gameScene) {
+        // Bắt buộc resume scene trước khi respawn — tránh lỗi scene vẫn bị pause
+        gameScene.scene.resume();
         gameScene.respawn();
       }
     }
@@ -237,6 +314,8 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
     setIsPaused(false);
     setBossIntroData(null);
     setMapClearData(null);
+    setRankResult(null);
+    setIsSaved(false);
     
     if (gameRef.current) {
       const gameScene = gameRef.current.scene.getScene('GameScene');
@@ -246,12 +325,18 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
         gameScene.state.checkpointScore = 0;
         gameScene.state.checkpointEnergy = 0;
         gameScene.state.checkpointFlasks = 0;
+        gameScene.state.checkpointGroundBugs = 0;
+        gameScene.state.checkpointFlyingBugs = 0;
         gameScene.state.deathCount = 0;
         gameScene.state.score = 0;
         gameScene.state.kaizenEnergy = 0;
         gameScene.state.flasksCollected = 0;
+        gameScene.state.groundBugsDefeated = 0;
+        gameScene.state.flyingBugsDefeated = 0;
         gameScene.state.hearts = 3;
         
+        // Bắt buộc resume scene trước khi respawn — tránh lỗi scene vẫn bị pause
+        gameScene.scene.resume();
         gameScene.respawn();
       }
     }
@@ -337,6 +422,10 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
               shieldRemaining={hudState.shieldRemaining}
               wingsRemaining={hudState.wingsRemaining}
               onPauseToggle={handlePauseToggle}
+              groundBugsDefeated={hudState.groundBugsDefeated}
+              flyingBugsDefeated={hudState.flyingBugsDefeated}
+              flasks={hudState.flasksCollected}
+              bossTriggerDelaySec={hudState.bossTriggerDelaySec}
             />
 
             {/* 3. Cutscenes Overlays */}
@@ -387,7 +476,7 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
       {/* COLUMN 3 (RIGHT): CABINET CONFIG, QUESTS & SHOP - hidden on small screens */}
       <div className="hidden xl:flex w-56 2xl:w-64 shrink-0 flex-col gap-3">
         <SidePanelRight
-          flasksCount={flasksCount}
+          flasksCount={hudState.flasksCollected}
           onOpenShop={() => {}}
           quests={quests}
           isCrtActive={isCrtActive}
@@ -398,7 +487,10 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
           setIsSoundMuted={handleSetMute}
           activeGender={activeGender}
           onChangeGender={handleSetGender}
-          topPlayers={topPlayers}
+          topPlayers={topPlayersList}
+          personalBest={personalBest}
+          isLoadingLeaderboard={isLoadingLeaderboard}
+          onRefreshLeaderboard={fetchLeaderboardData}
         />
       </div>
 

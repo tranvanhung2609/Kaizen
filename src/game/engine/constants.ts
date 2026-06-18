@@ -44,6 +44,12 @@ export const RUNNER_PHYSICS = {
   kaizenDuration: 8000,  // 8s
   shootCooldown:  250,   // 250ms — bắn nhanh hơn một chút cho feel tốt hơn
   
+  // Custom weapon & shooting mechanics parameters
+  bulletDamage: 50,         // Sát thương mỗi viên đạn
+  bulletScale: 0.15,        // Tỉ lệ scale của đạn keycap
+  weaponScale: 0.12,        // Tỉ lệ scale của súng bàn phím
+  bulletSpeed: 800,         // Tốc độ bay của đạn
+
   // Energy accumulation
   energyPerSecond: 5,   // +5%/sec
   energyPerFlask: 10,   // +10%/flask
@@ -51,6 +57,20 @@ export const RUNNER_PHYSICS = {
 
   // Max enemy count on screen (tối ưu performance)
   maxEnemiesOnScreen: 8,
+
+  // ── Enemy shooting parameters ──────────────────────────────────────────
+  enemyBulletSpeed: 180,          // px/s — tốc độ đạn lính cơ bản (tier 0)
+  enemyBulletDamage: 1,           // Sát thương mỗi viên đạn lính = 1 tim
+  enemyShootIntervalBase: 3000,   // ms — bắn mỗi 3 giây ở đầu game
+  enemyShootIntervalMin: 800,     // ms — tối thiểu 0.8s gần boss (tier 5)
+  enemyShootChance: 0.40,         // 40% lính spawn sẽ là loại bắn đạn
+
+  // ── Platform bậc thang (floating platforms) ───────────────────────────
+  floatingPlatformMinY: 200,      // Y cao nhất của platform floating (px)
+  floatingPlatformMaxY: 290,      // Y thấp nhất của platform floating (px)
+
+  // ── Item spawn trên trời ──────────────────────────────────────────────
+  skyItemSpawnChance: 0.20,       // 20% xác suất spawn item trên trời mỗi slot
 };
 
 export const SCORE_RULES = {
@@ -87,6 +107,10 @@ export const DIFFICULTY = {
   SPEED_PER_TIER: 0.10,    // +10% speed mỗi tier
   GAP_SHRINK_PER_TIER: 50, // Giảm 50px khoảng cách tối thiểu giữa pattern mỗi tier
   MIN_PATTERN_GAP: 150,    // Khoảng cách tối thiểu tuyệt đối (px)
+
+  // ── Enemy shooting difficulty scaling ─────────────────────────────────
+  ENEMY_SHOOT_SPEED_PER_TIER: 0.18,  // Mỗi tier, tốc độ đạn lính tăng thêm 18%
+  ENEMY_SHOOT_INTERVAL_SHRINK: 440,  // ms — mỗi tier rút ngắn 440ms interval bắn
 };
 
 export interface DifficultyState {

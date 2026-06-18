@@ -5,7 +5,7 @@ import { db } from '@/db';
 import { profiles, journeyScores } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
-import { extractDeptFromName } from '@/lib/profile';
+import { extractDeptFromName } from '@/lib/profile-utils';
 
 export const revalidate = 0; // Dynamic rendering
 
