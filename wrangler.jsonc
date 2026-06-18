@@ -1,0 +1,8 @@
+{
+    "name": "kaizen-journey",
+    "main": ".open-next/worker.js",
+    "compatibility_date": "2026-06-18",
+    "compatibility_flags": [
+        "nodejs_compat"
+    ]
+}
