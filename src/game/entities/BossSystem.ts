@@ -98,7 +98,8 @@ export class BossSystem {
     const playerX = playerSprite.x;
     // Lưu checkpoint tại cổng boss
     state.checkpointScore = state.score;
-    state.checkpointEnergy = state.kaizenEnergy;
+    state.checkpointEnergy = 100; // Đảm bảo luôn có 100% năng lượng khi respawn đấu boss
+    state.kaizenEnergy = 100; // Đầy năng lượng cho lượt đấu đầu tiên
     state.checkpointX = playerX;
     state.bossTriggerX = playerX;
 
@@ -113,7 +114,7 @@ export class BossSystem {
     this.sprite = scene.physics.add.sprite(camScrollX + scene.scale.width + 100, 300, 'hanoi_boss');
     const bossBody = this.sprite.body as Phaser.Physics.Arcade.Body;
     bossBody.setAllowGravity(false);
-    this.sprite.play('boss_idle').setScale(0.6); // Scaled down
+    this.sprite.play('boss_idle').setScale(0.6).setDepth(5); // Scaled down with depth 5
 
     // Map-specific boss tint
     if (mapConfig.mapKey === 'tokyo') this.sprite.setTint(0xff55bb);
@@ -167,7 +168,7 @@ export class BossSystem {
       this.sprite.y - 10, // Offset adjusted for smaller scale
       'security_voltage'
     );
-    bullet.setDisplaySize(16, 16).setTint(0xff3b30); // Scaled down
+    bullet.setDisplaySize(16, 16).setTint(0xff3b30).setDepth(8); // Scaled down
 
     const angle = Phaser.Math.Angle.Between(bullet.x, bullet.y, playerX, playerY);
     const speed = mapConfig.bossConfig.bulletSpeed;
@@ -230,7 +231,17 @@ export class BossSystem {
     state.bossActive = true;
     state.nextBossAttackTime = this.scene.time.now + 1000;
 
-    if (this.sprite && this.sprite.scene) {
+    if (!this.sprite || !this.sprite.scene) {
+      this.sprite = this.scene.physics.add.sprite(bossTriggerX + this.scene.scale.width * 0.8, 300, 'hanoi_boss');
+      const bossBody = this.sprite.body as Phaser.Physics.Arcade.Body;
+      bossBody.setAllowGravity(false);
+      this.sprite.play('boss_idle').setScale(0.6).setDepth(5);
+      
+      if (this.mapConfig.mapKey === 'tokyo') this.sprite.setTint(0xff55bb);
+      else if (this.mapConfig.mapKey === 'danang') this.sprite.setTint(0x00bbff);
+      
+      this.scene.physics.add.overlap(this.playerProjectiles, this.sprite, this.onHitBoss);
+    } else {
       this.sprite.setPosition(bossTriggerX + this.scene.scale.width * 0.8, 300).setAlpha(1).play('boss_idle');
     }
   }

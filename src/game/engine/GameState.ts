@@ -42,6 +42,7 @@ export interface GameState {
   checkpointFlasks: number; // Added to save flask count at checkpoint
   checkpointGroundBugs: number; // Save ground bugs count at checkpoint
   checkpointFlyingBugs: number; // Save flying bugs count at checkpoint
+  checkpointTime: number; // Save survival time at checkpoint
   bossTriggerX: number;
 
   // Level spawning
@@ -95,6 +96,7 @@ export function createInitialGameState(): GameState {
     checkpointFlasks: 0,
     checkpointGroundBugs: 0,
     checkpointFlyingBugs: 0,
+    checkpointTime: 0,
     bossTriggerX: 10000,
 
     activePitRanges: [],

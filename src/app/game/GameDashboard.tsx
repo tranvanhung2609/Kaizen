@@ -304,7 +304,7 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
       if (gameScene) {
         // Bắt buộc resume scene trước khi respawn — tránh lỗi scene vẫn bị pause
         gameScene.scene.resume();
-        gameScene.respawn();
+        gameScene.respawn(false);
       }
     }
   };
@@ -320,24 +320,9 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
     if (gameRef.current) {
       const gameScene = gameRef.current.scene.getScene('GameScene');
       if (gameScene) {
-        // Reset GameState checkpoints and scores
-        gameScene.state.checkpointX = 0;
-        gameScene.state.checkpointScore = 0;
-        gameScene.state.checkpointEnergy = 0;
-        gameScene.state.checkpointFlasks = 0;
-        gameScene.state.checkpointGroundBugs = 0;
-        gameScene.state.checkpointFlyingBugs = 0;
-        gameScene.state.deathCount = 0;
-        gameScene.state.score = 0;
-        gameScene.state.kaizenEnergy = 0;
-        gameScene.state.flasksCollected = 0;
-        gameScene.state.groundBugsDefeated = 0;
-        gameScene.state.flyingBugsDefeated = 0;
-        gameScene.state.hearts = 3;
-        
         // Bắt buộc resume scene trước khi respawn — tránh lỗi scene vẫn bị pause
         gameScene.scene.resume();
-        gameScene.respawn();
+        gameScene.respawn(true);
       }
     }
   };

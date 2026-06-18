@@ -241,7 +241,7 @@ export default class GameScene extends Phaser.Scene {
     this.hud.updateTitleText(this.titleTextObject, this.state.activeTitle);
 
     // Click to start UI
-    this.clickToStartText = this.add.text(width / 2, height / 2, 'CLICK TO START', {
+    this.clickToStartText = this.add.text(width / 2, height / 2, 'CLICK OR PRESS ENTER TO START', {
       font: '800 32px Courier New, monospace',
       color: '#00e5ff',
       backgroundColor: '#111125dd',
@@ -271,7 +271,7 @@ export default class GameScene extends Phaser.Scene {
     // Register click/key listeners to start sequence
     const triggerStart = () => this.startGameSequence();
     this.input.once('pointerdown', triggerStart);
-    this.input.keyboard?.once('keydown', triggerStart);
+    this.input.keyboard?.once('keydown-ENTER', triggerStart);
 
     // 11. Input keys
     this.keys = {
@@ -456,7 +456,7 @@ export default class GameScene extends Phaser.Scene {
       // Tạo đạn nhắm về phía player
       const bullet = this.enemyBulletsGroup.create(enemy.x, enemy.y, 'security_voltage') as Phaser.Physics.Arcade.Sprite;
       if (!bullet) continue;
-      bullet.setDisplaySize(14, 14).setTint(0xffaa00);
+      bullet.setDisplaySize(14, 14).setTint(0xffaa00).setDepth(8);
 
       const shootAngle = Phaser.Math.Angle.Between(enemy.x, enemy.y, playerX, playerY);
       const bSpeed = RUNNER_PHYSICS.enemyBulletSpeed * bulletSpeedMult;
@@ -519,6 +519,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Clean up input listeners
     this.input.off('pointerdown');
+    this.input.keyboard?.off('keydown-ENTER');
     this.input.keyboard?.off('keydown');
 
     this.clickToStartText.setVisible(false);
@@ -621,6 +622,7 @@ export default class GameScene extends Phaser.Scene {
     state.checkpointFlasks = state.flasksCollected;
     state.checkpointGroundBugs = state.groundBugsDefeated;
     state.checkpointFlyingBugs = state.flyingBugsDefeated;
+    state.checkpointTime = state.gameTimeElapsed; // Lưu thời gian sinh tồn tại checkpoint
     this.hud.showCheckpoint(this.playerSys.sprite.x);
 
     // Update visual checkpoints
@@ -638,9 +640,44 @@ export default class GameScene extends Phaser.Scene {
   // ─── Respawn (Public) ─────────────────────────────────────────────────────
   // Được gọi từ React UI khi player nhấn nút respawn.
   // Điều phối nhiều system — đây là lý do nó nằm trong GameScene coordinator.
-  public respawn(): void {
+  public respawn(fromBeginning = false): void {
     const { state } = this;
-    const isAtBoss = this.playerSys.sprite.x >= state.bossTriggerX;
+
+    // Hủy các tween chuyển động đang chạy để tránh xung đột vị trí
+    if (this.playerSys && this.playerSys.sprite) {
+      this.tweens.killTweensOf(this.playerSys.sprite);
+      this.playerSys.sprite.setAlpha(1);
+    }
+    if (this.bossSys && this.bossSys.sprite) {
+      this.tweens.killTweensOf(this.bossSys.sprite);
+      this.bossSys.sprite.setAlpha(1);
+      this.bossSys.sprite.setAngle(0);
+    }
+
+    if (fromBeginning) {
+      state.checkpointX = 0;
+      state.checkpointScore = 0;
+      state.checkpointEnergy = 0;
+      state.checkpointFlasks = 0;
+      state.checkpointGroundBugs = 0;
+      state.checkpointFlyingBugs = 0;
+      state.checkpointTime = 0;
+      state.deathCount = 0;
+      state.score = 0;
+      state.kaizenEnergy = 0;
+      state.flasksCollected = 0;
+      state.groundBugsDefeated = 0;
+      state.flyingBugsDefeated = 0;
+      state.hearts = 3;
+      state.isBossFight = false;
+      state.bossActive = false;
+      state.bossHp = 0;
+      state.maxBossHp = 0;
+      state.bossTriggerX = 10000;
+      state.gameTimeElapsed = 0;
+    }
+
+    const isAtBoss = state.isBossFight;
 
     // Reset scores/speed về checkpoint
     state.score = state.checkpointScore;
@@ -648,6 +685,7 @@ export default class GameScene extends Phaser.Scene {
     state.flasksCollected = state.checkpointFlasks;
     state.groundBugsDefeated = state.checkpointGroundBugs;
     state.flyingBugsDefeated = state.checkpointFlyingBugs;
+    state.gameTimeElapsed = state.checkpointTime || 0;
     state.hearts = 3;
     state.gameSpeed = 1.5;
     state.distance = state.checkpointX;
@@ -720,7 +758,7 @@ export default class GameScene extends Phaser.Scene {
         // Re-register listeners
         const triggerStart = () => this.startGameSequence();
         this.input.once('pointerdown', triggerStart);
-        this.input.keyboard?.once('keydown', triggerStart);
+        this.input.keyboard?.once('keydown-ENTER', triggerStart);
       } else {
         this.isPlaying = true;
         state.currentPhase = 'runner';

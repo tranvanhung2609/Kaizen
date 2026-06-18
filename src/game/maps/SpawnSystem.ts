@@ -78,18 +78,42 @@ export class SpawnSystem {
             if (this.isGeneratingPlatform) {
               // Platform: Chiều dài ngẫu nhiên 192px–768px (bội số của 64)
               const width = Math.floor(Phaser.Math.Between(192, 768) / 64) * 64;
-              this.nextRandomSegmentX = this.nextGroundX + width;
+              
+              // Generate all ground blocks for this platform immediately so physics body exists when entities spawn
+              for (let offset = 0; offset < width; offset += 64) {
+                const blockX = this.nextGroundX + offset;
+                if (isHanoi) {
+                  const x = blockX + 32;
+                  const block = this.scene.add.tileSprite(x, GROUND_Y, 64, 40, 'hanoi_ground_tiles');
+                  this.scene.physics.add.existing(block, true);
+                  this.groups.ground.add(block);
+                  block.setTileScale(64 / 512, 40 / 286);
+                  block.tilePositionX = blockX * 8;
+                  block.setDepth(5);
+                } else {
+                  const block = this.groups.ground.create(blockX + 32, GROUND_Y, 'hanoi_ground_tiles');
+                  block.setDisplaySize(64, 40);
+                  block.setAlpha(0);
+                  block.body.updateFromGameObject();
+                }
+              }
 
               // Spawn entity và platform floating trên platform mới này
               this.spawnRandomEntitiesOnPlatform(this.nextGroundX, width, state, mapConfig);
+
+              this.nextGroundX += width - 64; // Adjust nextGroundX since we pre-generated the blocks
+              this.nextRandomSegmentX = this.nextGroundX + 64;
+              shouldSpawnBlock = false;
             } else {
               // Gap (Pit): Khoảng cách ngẫu nhiên 64px–256px (bội số của 64)
               const gapWidth = Math.floor(Phaser.Math.Between(64, 256) / 64) * 64;
               this.nextRandomSegmentX = this.nextGroundX + gapWidth;
               state.activePitRanges.push({ start: this.nextGroundX, end: this.nextRandomSegmentX });
+              shouldSpawnBlock = false;
             }
+          } else {
+            shouldSpawnBlock = this.isGeneratingPlatform;
           }
-          shouldSpawnBlock = this.isGeneratingPlatform;
         }
       }
 

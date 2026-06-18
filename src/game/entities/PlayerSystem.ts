@@ -125,9 +125,14 @@ export class PlayerSystem {
     };
     scene.input.on('pointerdown', onPointerDown);
 
+    // Đăng ký phím ENTER thực hiện hành động tương tự click chuột (nhảy / kích hoạt Kaizen / bắn đạn)
+    const enterKey = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    enterKey.on('down', onPointerDown);
+
     // Cleanup listener khi scene shutdown — tránh memory leak
     scene.events.on('shutdown', () => {
       scene.input.off('pointerdown', onPointerDown);
+      enterKey.off('down', onPointerDown);
     });
 
     // ── Initialize Arrow Function Collision Handlers (Option B) ─────────────
@@ -169,27 +174,7 @@ export class PlayerSystem {
       return;
     }
 
-    // Horizontal adjustment using Left/Right or A/D
-    if (state.currentPhase === 'runner' || state.currentPhase === 'boss' || state.currentPhase === 'boss_intro') {
-      if (!this.controlsLocked) {
-        let moveDir = 0;
-        if (keys.left.isDown || keys.a.isDown) {
-          moveDir = -1;
-        } else if (keys.right.isDown || keys.d.isDown) {
-          moveDir = 1;
-        }
 
-        if (moveDir !== 0) {
-          const horizSpeed = 250; // px/s horizontal adjustment speed
-          this.relativeX += moveDir * horizSpeed * (_delta / 1000);
-        }
-      }
-
-      // Clamp relativeX to screen bounds: min 10% of screen width, max 80%
-      const minRelX = this.scene.scale.width * 0.1;
-      const maxRelX = this.scene.scale.width * 0.8;
-      this.relativeX = Phaser.Math.Clamp(this.relativeX, minRelX, maxRelX);
-    }
 
     // ── 1. Horizontal Movement ─────────────────────────────────────────────
     if (state.currentPhase === 'runner') {
@@ -391,15 +376,19 @@ export class PlayerSystem {
     const startX = this.weaponSprite.visible ? this.weaponSprite.x + 10 : this.sprite.x + 40;
     const startY = this.weaponSprite.visible ? this.weaponSprite.y : this.sprite.y - 10;
     
-    const proj = this.projectiles.create(startX, startY, 'kaizen_bullet');
-    proj.setDisplaySize(20, 20).setVelocityX(RUNNER_PHYSICS.bulletSpeed);
-    proj.body.updateFromGameObject();
+    const proj = this.projectiles.create(startX, startY, 'kaizen_bullet') as Phaser.Physics.Arcade.Sprite;
+    if (!proj) return;
+    proj.setScale(0.02).setDepth(8);
     
-    // Gán thông tin sát thương và xoay đạn keycap khi bay
-    proj.setData('damage', RUNNER_PHYSICS.bulletDamage);
-    if (proj.body) {
-      (proj.body as Phaser.Physics.Arcade.Body).setAngularVelocity(360);
+    const body = proj.body as Phaser.Physics.Arcade.Body;
+    if (body) {
+      body.setVelocityX(RUNNER_PHYSICS.bulletSpeed);
+      body.updateFromGameObject();
+      body.setAngularVelocity(360);
     }
+    
+    // Gán thông tin sát thương khi bay
+    proj.setData('damage', RUNNER_PHYSICS.bulletDamage);
 
     // Hiệu ứng giật súng (Recoil)
     if (this.weaponSprite.visible) {
@@ -672,7 +661,6 @@ export class PlayerSystem {
     state.kaizenUntil = 0;
     state.nextShootTime = 0;
     state.kaizenCooldownUntil = 0; // Reset Kaizen Cooldown on respawn
-    state.gameTimeElapsed = 0;
     state.kaizenAmmo = 0;
     state.groundBugsDefeated = state.checkpointGroundBugs || 0;
     state.flyingBugsDefeated = state.checkpointFlyingBugs || 0;

@@ -129,8 +129,18 @@ export default class HanoiMapScene extends Phaser.Scene {
     };
 
     // Pointer / Touch → Jump Buffer (giống GameScene — click chuột hoặc tap để nhảy)
-    this.input.on('pointerdown', () => {
+    const onJumpTrigger = () => {
       this.jumpBufferTimeLeft = RUNNER_PHYSICS.JUMP_BUFFER_MS;
+    };
+    this.input.on('pointerdown', onJumpTrigger);
+
+    // Bấm ENTER cũng nhảy tương tự click chuột
+    const enterKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+    enterKey.on('down', onJumpTrigger);
+
+    this.events.on('shutdown', () => {
+      this.input.off('pointerdown', onJumpTrigger);
+      enterKey.off('down', onJumpTrigger);
     });
 
     // ── 9. Key shortcuts ──────────────────────────────────────────────────

@@ -46,7 +46,6 @@ const MAPS = [
 const CONTROLS = [
   { keys: ['W', '↑'], action: 'Nhảy / Bay lên' },
   { keys: ['S', '↓'], action: 'Cúi / Hạ độ cao' },
-  { keys: ['A', 'D', '←', '→'], action: 'Di chuyển Trái/Phải' },
   { keys: ['SPACE'], action: 'Kích hoạt Kaizen / Bắn' },
 ];
 
