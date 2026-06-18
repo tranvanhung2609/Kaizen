@@ -90,6 +90,56 @@ export default function CutsceneOverlay({
     }
   }, [mapClearData]);
 
+  // Handle ENTER key confirmation for active overlays (Game Over, Paused, Boss Intro, Map Clear)
+  useEffect(() => {
+    const isOverlayActive = isGameOver || isPaused || !!bossIntroData || !!mapClearData;
+    if (!isOverlayActive) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isGameOver) {
+          const revivesLeft = Math.max(0, 3 - deathCount);
+          const hasRevives = revivesLeft > 0;
+          if (hasRevives) {
+            onRestartGame();
+          } else if (!(isSubmitting && !isSaved)) {
+            onRestartFromBeginning();
+          }
+        } else if (isPaused) {
+          onResumeGame();
+        } else if (bossIntroData) {
+          onCloseBossIntro();
+        } else if (mapClearData) {
+          if (!(isSubmitting && !isSaved)) {
+            onNextMap();
+          }
+        }
+      }
+    };
+
+    // Listen in the capture phase to intercept before other handlers
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [
+    isGameOver,
+    isPaused,
+    bossIntroData,
+    mapClearData,
+    deathCount,
+    isSubmitting,
+    isSaved,
+    onRestartGame,
+    onRestartFromBeginning,
+    onResumeGame,
+    onCloseBossIntro,
+    onNextMap
+  ]);
+
   // ─── 1. GAME OVER ─────────────────────────────────────────────────────────
   if (isGameOver) {
     const revivesLeft = Math.max(0, 3 - deathCount);

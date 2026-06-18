@@ -70,7 +70,7 @@ export default class MenuScene extends Phaser.Scene {
       color: '#00e5ff'
     }).setOrigin(0.5, 0.5);
 
-    this.add.text(cardX, cardY + 5, 'W/⬆ : Nhảy | S/⬇ : Cúi né | A/D/⬅/➡ : Di chuyển\nSPACE : Kích hoạt Kaizen Mode (Energy 100%) & Bắn đạn', {
+    this.add.text(cardX, cardY + 5, 'W/⬆ : Nhảy | S/⬇ : Cúi né\nSPACE : Kích hoạt Kaizen Mode (Energy 100%) & Bắn đạn', {
       font: '500 12px var(--font-sans)',
       color: '#cbd5e1',
       align: 'center'
