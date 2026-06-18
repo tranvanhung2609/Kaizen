@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { MapKey, MAP_SCROLL_SPEEDS, RUNNER_PHYSICS } from '../engine/constants';
+import { MapKey, MAP_SCROLL_SPEEDS, RUNNER_PHYSICS, DIFFICULTY, getDifficultyState } from '../engine/constants';
 import { hanoiMapConfig } from '../maps/hanoi';
 import { tokyoMapConfig } from '../maps/tokyo';
 import { danangMapConfig } from '../maps/danang';
@@ -35,8 +35,7 @@ export default class GameScene extends Phaser.Scene {
   private isPlaying = false;
   private clickToStartText!: Phaser.GameObjects.Text;
   private progressBarGraphics!: Phaser.GameObjects.Graphics;
-  private warningText!: Phaser.GameObjects.Text;
-  private warningTween: Phaser.Tweens.Tween | null = null;
+  // warningText đã được xử lý bởi React HUD BossTimerBar — không dùng canvas nữa
   private bossHpBarGraphics!: Phaser.GameObjects.Graphics;
   private bossHpText!: Phaser.GameObjects.Text;
   private hasStartedSequence = false;
@@ -62,19 +61,33 @@ export default class GameScene extends Phaser.Scene {
   private enemiesGroup!: Phaser.Physics.Arcade.Group;
   private obstaclesGroup!: Phaser.Physics.Arcade.Group;
   private bossProjectiles!: Phaser.Physics.Arcade.Group;
+  private enemyBulletsGroup!: Phaser.Physics.Arcade.Group; // Đạn bắn từ lính thường
 
   // ── Input ─────────────────────────────────────────────────────────────────
   private keys!: {
     up: Phaser.Input.Keyboard.Key;
     down: Phaser.Input.Keyboard.Key;
+    left: Phaser.Input.Keyboard.Key;
+    right: Phaser.Input.Keyboard.Key;
     w: Phaser.Input.Keyboard.Key;
     s: Phaser.Input.Keyboard.Key;
+    a: Phaser.Input.Keyboard.Key;
+    d: Phaser.Input.Keyboard.Key;
     space: Phaser.Input.Keyboard.Key;
     z: Phaser.Input.Keyboard.Key;
   };
 
   // ── Scrolling ─────────────────────────────────────────────────────────────
   private virtualScrollX = 0;
+
+  // ── Checkpoints ───────────────────────────────────────────────────────────
+  private checkpoints: Array<{
+    x: number;
+    y: number;
+    activated: boolean;
+    graphics: Phaser.GameObjects.Graphics;
+    textObj: Phaser.GameObjects.Text;
+  }> = [];
 
   // ── UI ────────────────────────────────────────────────────────────────────
   private titleTextObject: Phaser.GameObjects.Text | null = null;
@@ -122,12 +135,13 @@ export default class GameScene extends Phaser.Scene {
     this.parallax.create(this, width, height, this.mapConfig);
 
     // 2. Physics groups
-    this.groundGroup    = this.physics.add.staticGroup();
-    this.flasksGroup    = this.physics.add.group({ allowGravity: false });
-    this.powerupsGroup  = this.physics.add.group({ allowGravity: false });
-    this.enemiesGroup   = this.physics.add.group({ gravityY: 0 });
-    this.obstaclesGroup = this.physics.add.group();
-    this.bossProjectiles = this.physics.add.group({ allowGravity: false });
+    this.groundGroup       = this.physics.add.staticGroup();
+    this.flasksGroup       = this.physics.add.group({ allowGravity: false });
+    this.powerupsGroup     = this.physics.add.group({ allowGravity: false });
+    this.enemiesGroup      = this.physics.add.group({ gravityY: 0 });
+    this.obstaclesGroup    = this.physics.add.group();
+    this.bossProjectiles   = this.physics.add.group({ allowGravity: false });
+    this.enemyBulletsGroup = this.physics.add.group({ allowGravity: false }); // Đạn lính thường
 
     // 3. HUD system
     this.hud.init(this);
@@ -147,14 +161,15 @@ export default class GameScene extends Phaser.Scene {
     this.playerSys.sprite.setPosition(-50, 200);
     this.playerSys.sprite.setVelocity(0, 0);
 
-    // 6. Spawn system
+    // 6. Spawn system — truyền mapConfig để floating platform biết map nào
     this.spawn.init(this, {
       ground: this.groundGroup,
       flasks: this.flasksGroup,
       powerups: this.powerupsGroup,
       enemies: this.enemiesGroup,
       obstacles: this.obstaclesGroup,
-    });
+      enemyBullets: this.enemyBulletsGroup,
+    }, this.mapConfig);
 
     // 7. Boss system
     this.bossSys.init(
@@ -202,6 +217,20 @@ export default class GameScene extends Phaser.Scene {
       this.playerSys.onHitBossProjectile
     );
 
+    // Đạn lính chạm player
+    this.physics.add.overlap(
+      this.playerSys.sprite, this.enemyBulletsGroup,
+      this.playerSys.onHitEnemyBullet
+    );
+    // Đạn player có thể hủy đạn lính
+    this.physics.add.overlap(
+      this.playerSys.projectiles, this.enemyBulletsGroup,
+      (_pProj: any, _eBullet: any) => {
+        _pProj.destroy();
+        _eBullet.destroy();
+      }
+    );
+
     // 10. Title text
     this.titleTextObject = this.add.text(150, 250, '', {
       font: '900 10px Courier New, monospace',
@@ -227,15 +256,10 @@ export default class GameScene extends Phaser.Scene {
       loop: -1
     });
 
-    this.progressBarGraphics = this.add.graphics().setDepth(100);
+    this.progressBarGraphics = this.add.graphics().setDepth(100).setVisible(false); // Ẩn: đã dùng React HUD
     this.bossHpBarGraphics = this.add.graphics().setDepth(100);
     
-    this.warningText = this.add.text(width / 2, height / 2, 'WARNING: BOSS APPROACHING!', {
-      font: '900 36px Courier New, monospace',
-      color: '#ff0000',
-      stroke: '#000000',
-      strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(100).setVisible(false);
+    // warningText không còn dùng — React BossTimerBar thay thế
 
     this.bossHpText = this.add.text(0, 0, '', {
       font: '900 12px Courier New, monospace',
@@ -253,8 +277,12 @@ export default class GameScene extends Phaser.Scene {
     this.keys = {
       up:    this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
       down:  this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
+      left:  this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT),
+      right: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT),
       w:     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
       s:     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      a:     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      d:     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
       space: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
       z:     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Z),
     };
@@ -271,7 +299,9 @@ export default class GameScene extends Phaser.Scene {
       this.cameras.main.stopFollow();
       this.cameras.main.scrollX = 0;
     } else {
-      this.cameras.main.startFollow(this.playerSys.sprite, true, 1.0, 1.0, -480, 0);
+      this.cameras.main.stopFollow();
+      const width = this.cameras.main.width;
+      this.cameras.main.scrollX = Math.max(0, this.playerSys.sprite.x - width * 0.4);
     }
 
     // Speed management timer removed to keep game speed fixed
@@ -282,6 +312,9 @@ export default class GameScene extends Phaser.Scene {
 
     // 14. Debug hooks (chỉ dùng khi dev/QA)
     this.setupDebugHooks();
+
+    // Initialize visual checkpoint flags
+    this.initCheckpoints();
 
     // Initial HUD emit
     this.cbHudEmit();
@@ -298,7 +331,6 @@ export default class GameScene extends Phaser.Scene {
       this.progressBarGraphics.clear();
       this.bossHpBarGraphics.clear();
       this.bossHpText.setVisible(false);
-      this.warningText.setVisible(false);
       return;
     }
 
@@ -307,7 +339,6 @@ export default class GameScene extends Phaser.Scene {
       this.progressBarGraphics.clear();
       this.bossHpBarGraphics.clear();
       this.bossHpText.setVisible(false);
-      this.warningText.setVisible(false);
     }
 
     // Tích lũy thời gian sinh tồn
@@ -320,6 +351,7 @@ export default class GameScene extends Phaser.Scene {
       this.cameras.main.scrollX = 0;
       this.virtualScrollX = 0;
       state.distance = this.playerSys.sprite.x;
+      this.playerSys.relativeX = this.playerSys.sprite.x - this.cameras.main.scrollX;
     } else if (state.currentPhase === 'runner') {
       // Cuộn camera theo tốc độ từng map (px/s) nhân với speedMultiplier
       const mapKey = (this.mapConfig.mapKey as MapKey) ?? 'hanoi';
@@ -329,8 +361,8 @@ export default class GameScene extends Phaser.Scene {
       this.virtualScrollX = this.cameras.main.scrollX;
       state.distance = this.playerSys.sprite.x;
 
-      // Lock player X at 2/5 screen width — đồng bộ với camera
-      this.playerSys.sprite.x = this.cameras.main.scrollX + width * 0.4;
+      // Lock player X at relativeX instead of static 40% screen width
+      this.playerSys.sprite.x = this.cameras.main.scrollX + this.playerSys.relativeX;
 
       // Dọn dẹp activePitRanges đã qua viewport để tránh tốn bộ nhớ
       const camLeft = this.cameras.main.scrollX;
@@ -339,71 +371,55 @@ export default class GameScene extends Phaser.Scene {
       this.spawn.generateTerrain(this.playerSys.sprite.x + 1024, state, this.mapConfig);
       this.spawn.generatePatterns(this.playerSys.sprite.x, state, this.mapConfig);
       
-      // Boss timer check
+      // Boss timer check — chỉ trigger boss; progress bar đã do React HUD xử lý
       if (state.gameTimeElapsed >= BOSS_DELAY_SEC) {
         this.progressBarGraphics.clear();
-        this.warningText.setVisible(false);
-        if (this.warningTween) {
-          this.warningTween.stop();
-          this.warningTween = null;
-        }
         
         state.bossTriggerX = this.playerSys.sprite.x;
         this.bossSys.checkTrigger(this.playerSys.sprite);
-      } else {
-        // Draw progress bar
-        this.drawProgressBar();
-
-        // Warning in the last 10 seconds
-        const timeLeft = BOSS_DELAY_SEC - state.gameTimeElapsed;
-        if (timeLeft <= 10 && timeLeft > 0) {
-          if (!this.warningText.visible) {
-            this.warningText.setVisible(true);
-            this.warningTween = this.tweens.add({
-              targets: this.warningText,
-              alpha: 0.2,
-              duration: 500,
-              yoyo: true,
-              repeat: -1
-            });
-          }
-        }
       }
       this.checkIntermediateCheckpoints();
     } else if (state.currentPhase === 'boss' || state.currentPhase === 'boss_intro') {
       this.virtualScrollX = this.cameras.main.scrollX;
       state.distance = this.playerSys.sprite.x;
 
-      // Lock player X at 1/5 screen width
-      this.playerSys.sprite.x = this.cameras.main.scrollX + width * 0.2;
+      // Lock player X at relativeX for boss fight, synchronize during boss intro tween
+      if (state.currentPhase === 'boss') {
+        this.playerSys.sprite.x = this.cameras.main.scrollX + this.playerSys.relativeX;
+      } else {
+        this.playerSys.relativeX = this.playerSys.sprite.x - this.cameras.main.scrollX;
+      }
 
       this.progressBarGraphics.clear();
-      this.warningText.setVisible(false);
-      if (this.warningTween) {
-        this.warningTween.stop();
-        this.warningTween = null;
-      }
     }
 
     // Cập nhật player
     this.playerSys.update(time, delta, this.keys);
 
-    // Move enemies slowly towards player (chỉ xử lý max 8 enemies gần nhất)
+    // ── Enemy AI: Di Chuyển + Bắn Đạn ──────────────────────────────────────
     const camScrollX = this.cameras.main.scrollX;
+    // width đã khai báo ở đầu update() — tái sử dụng ở đây
     const enemyChildren = this.enemiesGroup.getChildren() as Phaser.Physics.Arcade.Sprite[];
+    const playerX = this.playerSys.sprite.x;
+    const playerY = this.playerSys.sprite.y;
+
+    // Tính độ khó hiện tại để scale tốc độ/interval đạn
+    const diffTier = getDifficultyState(state.score).tier;
+    const bulletSpeedMult = 1 + diffTier * DIFFICULTY.ENEMY_SHOOT_SPEED_PER_TIER;
+
     let activeCount = 0;
     for (const enemy of enemyChildren) {
       if (!enemy || !enemy.active || !enemy.body) continue;
       const distToCam = enemy.x - camScrollX;
       // Chỉ xử lý enemy trong viewport + buffer 200px
-      if (distToCam < -100 || distToCam > 900) continue;
+      if (distToCam < -100 || distToCam > width + 200) continue;
       if (activeCount >= RUNNER_PHYSICS.maxEnemiesOnScreen) break;
       activeCount++;
 
-      const px = this.playerSys.sprite.x + (enemy.getData('targetOffsetX') || 0);
-      const py = this.playerSys.sprite.y + (enemy.getData('targetOffsetY') || 0);
+      // ── Di chuyển về phía player ────────────────────────────────────────
+      const px = playerX + (enemy.getData('targetOffsetX') || 0);
+      const py = playerY + (enemy.getData('targetOffsetY') || 0);
       const speed = enemy.getData('speed') || 50;
-
       const dx = px - enemy.x;
       const dy = py - enemy.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -423,7 +439,39 @@ export default class GameScene extends Phaser.Scene {
         const directionX = dx > 0 ? 1 : -1;
         (enemy.body as Phaser.Physics.Arcade.Body).setVelocityX(directionX * speed);
       }
+
+      // ── Bắn Đạn Về Phía Player ──────────────────────────────────────────
+      if (!enemy.getData('canShoot')) continue;
+      const nextShootT = enemy.getData('nextShootTime') || 0;
+      if (time < nextShootT) continue;
+
+      // Chỉ bắn nếu player ở bên trái (trong tầm nhìn hợp lý)
+      const distToPlayer = Math.abs(enemy.x - playerX);
+      if (distToPlayer > 700) continue; // Lính chỉ bắn khi player trong 700px
+
+      const shootInterval = enemy.getData('shootInterval') || RUNNER_PHYSICS.enemyShootIntervalBase;
+      // Cập nhật lần bắn tiếp theo (±20% jitter để không đồng loạt)
+      enemy.setData('nextShootTime', time + shootInterval * (0.8 + Math.random() * 0.4));
+
+      // Tạo đạn nhắm về phía player
+      const bullet = this.enemyBulletsGroup.create(enemy.x, enemy.y, 'security_voltage') as Phaser.Physics.Arcade.Sprite;
+      if (!bullet) continue;
+      bullet.setDisplaySize(14, 14).setTint(0xffaa00);
+
+      const shootAngle = Phaser.Math.Angle.Between(enemy.x, enemy.y, playerX, playerY);
+      const bSpeed = RUNNER_PHYSICS.enemyBulletSpeed * bulletSpeedMult;
+      this.physics.velocityFromAngle(Phaser.Math.RadToDeg(shootAngle), bSpeed, (bullet.body as Phaser.Physics.Arcade.Body).velocity);
+      (bullet.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
+      // Xoay đạn khi bay để nhận diện rõ hơn
+      (bullet.body as Phaser.Physics.Arcade.Body).setAngularVelocity(300);
     }
+
+    // Cull đạn lính ra ngoài viewport (cả biên trái lẫn biên phải)
+    this.enemyBulletsGroup.getChildren().forEach((b: any) => {
+      if (b.active && (b.x < camScrollX - 150 || b.x > camScrollX + width + 200 || b.y > 560 || b.y < -50)) {
+        b.destroy();
+      }
+    });
 
     // Cập nhật vị trí title text
     if (this.titleTextObject?.visible && state.currentPhase !== 'map_clear') {
@@ -441,6 +489,14 @@ export default class GameScene extends Phaser.Scene {
 
     // Culling entities ngoài viewport
     this.spawn.cullOffscreen(this.cameras.main.scrollX - 200);
+
+    // Hủy đạn của player bay vượt qua biên phải của màn hình
+    const camRight = this.cameras.main.scrollX + width;
+    this.playerSys.projectiles.getChildren().forEach((proj: any) => {
+      if (proj.active && proj.x > camRight + 100) {
+        proj.destroy();
+      }
+    });
 
     // Boss AI attack
     if (state.currentPhase === 'boss') {
@@ -563,7 +619,20 @@ export default class GameScene extends Phaser.Scene {
     state.checkpointScore = state.score;
     state.checkpointEnergy = state.kaizenEnergy;
     state.checkpointFlasks = state.flasksCollected;
+    state.checkpointGroundBugs = state.groundBugsDefeated;
+    state.checkpointFlyingBugs = state.flyingBugsDefeated;
     this.hud.showCheckpoint(this.playerSys.sprite.x);
+
+    // Update visual checkpoints
+    this.checkpoints.forEach(cp => {
+      if (cp.x === x && !cp.activated) {
+        cp.activated = true;
+        this.drawCheckpointFlag(cp.graphics, true);
+        cp.textObj.setText('ACTIVE').setColor('#00ff87');
+        // Play powerup sound when checkpoint is activated
+        this.audio.playPowerup();
+      }
+    });
   }
 
   // ─── Respawn (Public) ─────────────────────────────────────────────────────
@@ -577,18 +646,22 @@ export default class GameScene extends Phaser.Scene {
     state.score = state.checkpointScore;
     state.kaizenEnergy = state.checkpointEnergy;
     state.flasksCollected = state.checkpointFlasks;
+    state.groundBugsDefeated = state.checkpointGroundBugs;
+    state.flyingBugsDefeated = state.checkpointFlyingBugs;
     state.hearts = 3;
     state.gameSpeed = 1.5;
     state.distance = state.checkpointX;
  
-    // Xóa toàn bộ entities
+    // Xóa toàn bộ entities (kể cả đạn lính)
     this.enemiesGroup.clear(true, true);
     this.obstaclesGroup.clear(true, true);
     this.flasksGroup.clear(true, true);
     this.powerupsGroup.clear(true, true);
     this.playerSys.projectiles.clear(true, true);
     this.bossProjectiles.clear(true, true);
+    this.enemyBulletsGroup.clear(true, true); // Dọn đạn lính còn bay
     state.activePitRanges = [];
+
  
     // Player respawn
     this.playerSys.respawn({
@@ -651,12 +724,22 @@ export default class GameScene extends Phaser.Scene {
       } else {
         this.isPlaying = true;
         state.currentPhase = 'runner';
-        this.cameras.main.startFollow(this.playerSys.sprite, true, 1.0, 1.0, -480, 0);
+        this.cameras.main.stopFollow();
         const spawnX = state.checkpointX + 100;
-        this.cameras.main.scrollX = Math.max(0, spawnX - 480);
+        const width = this.cameras.main.width;
+        this.cameras.main.scrollX = Math.max(0, spawnX - width * 0.4);
         this.virtualScrollX = this.cameras.main.scrollX;
       }
     }
+
+    // Sync visual checkpoint flags activation state
+    this.checkpoints.forEach(cp => {
+      const activated = state.checkpointX >= cp.x;
+      cp.activated = activated;
+      this.drawCheckpointFlag(cp.graphics, activated);
+      cp.textObj.setText(activated ? 'ACTIVE' : 'CHECKPOINT')
+        .setColor(activated ? '#00ff87' : '#ff3b30');
+    });
 
     this.hud.resetTracking();
     this.cbHudEmit();
@@ -739,5 +822,68 @@ export default class GameScene extends Phaser.Scene {
         this.update(this.time.now, 1000 / 60);
       }
     };
+  }
+
+  // ─── Visual Checkpoints Helper Methods ─────────────────────────────────────
+  private initCheckpoints(): void {
+    // Clear old if any
+    this.checkpoints.forEach(cp => {
+      cp.graphics.destroy();
+      cp.textObj.destroy();
+    });
+    this.checkpoints = [];
+
+    const cpPositions = [2000, 4000];
+    const groundY = 350; // Ground surface Y (GROUND_Y 370 - block height 40/2 = 350)
+
+    cpPositions.forEach(x => {
+      const graphics = this.add.graphics().setDepth(4);
+      graphics.setPosition(x, groundY);
+      
+      const textObj = this.add.text(x, groundY - 110, 'CHECKPOINT', {
+        font: '800 10px Courier New, monospace',
+        color: '#ff3b30',
+        backgroundColor: '#111125dd',
+        padding: { x: 4, y: 2 }
+      }).setOrigin(0.5).setDepth(4);
+
+      this.checkpoints.push({
+        x,
+        y: groundY,
+        activated: false,
+        graphics,
+        textObj
+      });
+      
+      this.drawCheckpointFlag(graphics, false);
+    });
+  }
+
+  private drawCheckpointFlag(graphics: Phaser.GameObjects.Graphics, activated: boolean): void {
+    graphics.clear();
+    
+    // Pole (cột cờ)
+    graphics.lineStyle(3, 0x64748b, 1);
+    graphics.lineBetween(0, 0, 0, -80); // Cột cao 80px từ mặt đất
+    
+    // Base (bệ đỡ)
+    graphics.fillStyle(0x334155, 1);
+    graphics.fillTriangle(-12, 0, 12, 0, 0, -8);
+    
+    // Flag cloth (lá cờ)
+    const color = activated ? 0x00ff87 : 0xff3b30; // Green if active, Red if not
+    
+    graphics.fillStyle(color, 1);
+    graphics.fillTriangle(0, -80, 25, -68, 0, -56);
+    
+    // Light bulb top (đèn tín hiệu trên đỉnh cột cờ)
+    graphics.fillStyle(color, 1);
+    graphics.fillCircle(0, -82, 4);
+    
+    // Draw some glow if activated
+    if (activated) {
+      graphics.lineStyle(1, 0x00ff87, 0.5);
+      graphics.strokeCircle(0, -82, 8);
+    }
   }
 }

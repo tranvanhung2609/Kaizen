@@ -5,6 +5,7 @@ import { profiles } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { ensureProfileExists } from '@/lib/profile';
 
 export async function updateProfile(data: {
   fullName?: string;
@@ -13,8 +14,21 @@ export async function updateProfile(data: {
   // Enforce authentication
   const user = await requireAuth();
 
+  // Đảm bảo profile và journey_score tồn tại trong database trước khi cập nhật
+  try {
+    await ensureProfileExists(
+      user.id,
+      user.email || '',
+      user.user_metadata?.full_name || '',
+      user.user_metadata?.avatar_url || ''
+    );
+  } catch (profileErr) {
+    console.error('[updateProfile] Failed to ensure profile exists:', profileErr);
+  }
+
   try {
     const updateData: Partial<typeof profiles.$inferInsert> = {};
+
 
     if (data.fullName !== undefined) updateData.fullName = data.fullName.trim();
     if (data.department !== undefined) updateData.department = data.department.trim();

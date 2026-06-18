@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateProfile } from '@/app/actions/profile';
-import { extractDeptFromName } from '@/lib/profile';
+import { extractDeptFromName } from '@/lib/profile-utils';
 
 interface ProfileModalProps {
   isOpen: boolean;
