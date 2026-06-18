@@ -28,7 +28,6 @@ export class PlayerSystem {
   // Public refs — GameScene cần để setup physics colliders
   sprite!: Phaser.Physics.Arcade.Sprite;
   projectiles!: Phaser.Physics.Arcade.Group;
-  weaponSprite!: Phaser.GameObjects.Sprite;
 
   // ── Jump Feel State ──────────────────────────────────────────────────────
   private coyoteTimeLeft = 0;
@@ -36,7 +35,6 @@ export class PlayerSystem {
   private hasDoubleJump = false;
   private wasOnGround = false;
   private jumpKeyWasDown = false;
-  private spaceWasDown = false;        // Track Space justDown để bắn một phát mỗi lần nhấn
   private lastSafePos = { x: 150, y: 200 };
   private controlsLocked = false;
   private pointerJustPressed = false; // Flag to track touch/click jumps reliably
@@ -92,10 +90,6 @@ export class PlayerSystem {
 
     // ── Projectile Pool ────────────────────────────────────────────────────
     this.projectiles = scene.physics.add.group({ allowGravity: false });
-
-    // ── Weapon Sprite Setup ────────────────────────────────────────────────
-    this.weaponSprite = scene.add.sprite(this.sprite.x, this.sprite.y, 'kaizen_keyboard');
-    this.weaponSprite.setScale(RUNNER_PHYSICS.weaponScale).setDepth(6).setVisible(false);
 
     // ── Mouse / Touch Input ────────────
     const onPointerDown = () => {
@@ -243,29 +237,14 @@ export class PlayerSystem {
     }
 
     // ── 4. Shooting ──────────────────────────────────────────────────────────
-    // Chỉ cho phép bắn khi đang Kaizen Mode và còn đạn
+    // Chỉ cho phép bắn khi đang Kaizen Mode và còn đạn.
+    // Giữ Space/Z sẽ bắn theo cooldown; nếu Space vừa dùng để kích hoạt Kaizen,
+    // nextShootTime đã trì hoãn viên đầu tiên để tránh bắn ngay cùng frame.
     if (!this.controlsLocked && state.isKaizenMode && state.kaizenAmmo > 0) {
-      const spaceDown = keys.space.isDown;
-      const spaceJustPressed = spaceDown && !this.spaceWasDown; // Edge detect: chỉ lấy 1 lần nhấn
-      this.spaceWasDown = spaceDown;
-
-      // Space (justPressed) hoặc Z (isDown cho phép giữ bắn liên tục)
-      const wantShoot = spaceJustPressed || (keys.z?.isDown ?? false);
+      const wantShoot = keys.space.isDown || (keys.z?.isDown ?? false);
       if (wantShoot && time > state.nextShootTime) {
         this.shoot(time);
       }
-    } else {
-      // Reset spaceWasDown khi không đủ điều kiện bắn
-      this.spaceWasDown = keys.space.isDown;
-    }
-
-    // ── 5. Weapon Display Update ───────────────────────────────────────────
-    if (state.isKaizenMode && state.currentPhase !== 'game_over' && state.currentPhase !== 'map_clear') {
-      this.weaponSprite.setVisible(true);
-      const offsetY = isCrouching ? 20 : 10;
-      this.weaponSprite.setPosition(this.sprite.x + 20, this.sprite.y + offsetY);
-    } else {
-      this.weaponSprite.setVisible(false);
     }
   }
 
@@ -372,34 +351,29 @@ export class PlayerSystem {
     this.audio.playShoot();
     state.nextShootTime = time + RUNNER_PHYSICS.shootCooldown;
     
-    // Bắn từ nòng súng nếu súng đang hiển thị, ngược lại bắn từ mascot
-    const startX = this.weaponSprite.visible ? this.weaponSprite.x + 10 : this.sprite.x + 40;
-    const startY = this.weaponSprite.visible ? this.weaponSprite.y : this.sprite.y - 10;
+    const startX = this.sprite.x + 40;
+    const startY = this.sprite.y - 10;
     
-    const proj = this.projectiles.create(startX, startY, 'kaizen_bullet') as Phaser.Physics.Arcade.Sprite;
+    const frame = Phaser.Math.Between(0, 1);
+    const proj = this.projectiles.create(startX, startY, 'kaizen_bullet', frame) as Phaser.Physics.Arcade.Sprite;
     if (!proj) return;
-    proj.setScale(0.02).setDepth(8);
+    proj
+      .setOrigin(0.5, 0.5)
+      .setDepth(9)
+      .setDisplaySize(48, 28)
+      .setVelocityX(RUNNER_PHYSICS.bulletSpeed);
     
     const body = proj.body as Phaser.Physics.Arcade.Body;
     if (body) {
-      body.setVelocityX(RUNNER_PHYSICS.bulletSpeed);
+      body.setAllowGravity(false);
       body.updateFromGameObject();
+      body.setSize(42, 18, true);
       body.setAngularVelocity(360);
     }
     
     // Gán thông tin sát thương khi bay
     proj.setData('damage', RUNNER_PHYSICS.bulletDamage);
-
-    // Hiệu ứng giật súng (Recoil)
-    if (this.weaponSprite.visible) {
-      this.scene.tweens.add({
-        targets: this.weaponSprite,
-        x: this.weaponSprite.x - 8,
-        duration: 50,
-        yoyo: true,
-        repeat: 0
-      });
-    }
+    proj.setData('enemyDamage', 100);
 
     if (this.state.isKaizenMode) {
       this.state.kaizenAmmo = Math.max(0, this.state.kaizenAmmo - 1);
@@ -409,9 +383,6 @@ export class PlayerSystem {
         this.state.kaizenEnergy = 0;
         this.onRestoreTint();
         this.sprite.play(`${this.state.activeGender}_run`);
-        if (this.weaponSprite) {
-          this.weaponSprite.setVisible(false);
-        }
       }
     }
   }
@@ -577,12 +548,13 @@ export class PlayerSystem {
 
     // Player projectile hits enemy
     this.onProjectileHitEnemy = (proj, enemy) => {
+      if (!proj?.active || !enemy?.active) return;
       proj.destroy();
       let enemyHp = enemy.getData('hp');
       if (enemyHp === undefined) {
         enemyHp = enemy.getData('kind') === 'flying_bug' ? 100 : 50;
       }
-      enemyHp -= RUNNER_PHYSICS.bulletDamage; // Bullet damage từ cấu hình
+      enemyHp -= proj.getData('enemyDamage') || RUNNER_PHYSICS.bulletDamage;
       enemy.setData('hp', enemyHp);
 
       if (enemyHp <= 0) {
@@ -664,9 +636,6 @@ export class PlayerSystem {
     state.kaizenAmmo = 0;
     state.groundBugsDefeated = state.checkpointGroundBugs || 0;
     state.flyingBugsDefeated = state.checkpointFlyingBugs || 0;
-    if (this.weaponSprite) {
-      this.weaponSprite.setVisible(false);
-    }
     this.onRestoreTint();
     this.sprite.play(`${state.activeGender}_run`);
     this.resetJumpState();
