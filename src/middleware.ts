@@ -18,7 +18,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/assets') ||
     pathname.startsWith('/audio') ||
     pathname.startsWith('/physics') ||
-    pathname === '/favicon.ico'
+    pathname === '/favicon.ico' ||
+    pathname === '/icon.png'
   ) {
     return supabaseResponse;
   }
@@ -49,6 +50,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|_next/webpack-hmr|favicon.ico|icon.png|.*\\..*).*)',
   ],
 };
