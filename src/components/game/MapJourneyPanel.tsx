@@ -44,10 +44,10 @@ const MAPS = [
 ];
 
 const CONTROLS = [
-  { keys: ['W', '↑'], action: 'Nhảy' },
-  { keys: ['↓'], action: 'Cúi / Né' },
-  { keys: ['SPACE'], action: 'Kaizen Mode' },
-  { keys: ['←', '→'], action: 'Di chuyển' },
+  { keys: ['W', '↑'], action: 'Nhảy / Bay lên' },
+  { keys: ['S', '↓'], action: 'Cúi / Hạ độ cao' },
+  { keys: ['A', 'D', '←', '→'], action: 'Di chuyển Trái/Phải' },
+  { keys: ['SPACE'], action: 'Kích hoạt Kaizen / Bắn' },
 ];
 
 function getRankLabel(score: number) {

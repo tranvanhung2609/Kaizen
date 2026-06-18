@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { SCORE_RULES } from '../engine/constants';
+import { SCORE_RULES, RUNNER_PHYSICS } from '../engine/constants';
 import { GameState } from '../engine/GameState';
 import { AudioSynth } from '../engine/AudioSynth';
 import { MapConfig } from '../maps/MapConfig';
@@ -49,11 +49,37 @@ export class BossSystem {
     this.onHitBoss = (proj, _boss) => {
       proj.destroy();
       if (state.currentPhase !== 'boss' || !state.bossActive) return;
-      state.bossHp = Math.max(0, state.bossHp - 50); // Decrement by 50 HP per hit
+      
+      const damage = proj.getData('damage') || RUNNER_PHYSICS.bulletDamage;
+      state.bossHp = Math.max(0, state.bossHp - damage);
       audio.playFlask();
+      
       // Flash trắng khi trúng đạn
       this.sprite?.setTint(0xffffff);
-      scene.time.delayedCall(100, () => this.sprite?.clearTint()); // Flash white for 0.1s (100ms)
+      scene.time.delayedCall(100, () => {
+        if (this.sprite && this.sprite.active) {
+          if (this.mapConfig.mapKey === 'tokyo') this.sprite.setTint(0xff55bb);
+          else if (this.mapConfig.mapKey === 'danang') this.sprite.setTint(0x00bbff);
+          else this.sprite.clearTint();
+        }
+      });
+
+      // Tạo chữ báo sát thương bay lên (Damage Popup)
+      const damageText = scene.add.text(proj.x, proj.y - 20, `-${damage}`, {
+        font: '900 16px Courier New, monospace',
+        color: '#ff3b30',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setDepth(10).setOrigin(0.5);
+
+      scene.tweens.add({
+        targets: damageText,
+        y: damageText.y - 40,
+        alpha: 0,
+        duration: 600,
+        onComplete: () => damageText.destroy()
+      });
+
       onHudEmit();
       if (state.bossHp <= 0) this.defeat();
     };

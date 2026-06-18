@@ -4,49 +4,49 @@ import { profiles, journeyScores } from '@/db/schema';
 import { eq, desc, ne } from 'drizzle-orm';
 import Navbar from '@/components/Navbar';
 import GameClientWrapper from './GameClientWrapper';
-import { extractDeptFromName } from '@/lib/profile';
+import { ensureProfileExists } from '@/lib/profile';
+import { extractDeptFromName } from '@/lib/profile-utils';
 
 export default async function GamePage() {
   // Guard the page and get the authenticated VTI user
   const user = await requireAuth();
 
-  // Try to load the user's profile to extract details
+  // Đảm bảo profile và journey_score tồn tại trong DB để tránh lỗi FK khi chơi/submit điểm
+  let profile = null;
+  try {
+    profile = await ensureProfileExists(
+      user.id,
+      user.email || '',
+      user.user_metadata?.full_name || '',
+      user.user_metadata?.avatar_url || ''
+    );
+  } catch (err) {
+    console.error('Failed to ensure profile exists:', err);
+  }
+
+  // Load the user's profile to extract details
   let dbProfile = {
     id: user.id,
-    email: user.email,
+    email: user.email || '',
     fullName: user.user_metadata?.full_name || '',
     avatarUrl: user.user_metadata?.avatar_url || '',
     role: 'user',
   };
   let department = '';
 
-  try {
-    const [profile] = await db
-      .select({
-        id: profiles.id,
-        email: profiles.email,
-        fullName: profiles.fullName,
-        avatarUrl: profiles.avatarUrl,
-        department: profiles.department,
-        role: profiles.role,
-      })
-      .from(profiles)
-      .where(eq(profiles.id, user.id))
-      .limit(1);
-
-    if (profile) {
-      dbProfile = {
-        id: profile.id,
-        email: profile.email,
-        fullName: profile.fullName || '',
-        avatarUrl: profile.avatarUrl || '',
-        role: profile.role || 'user',
-      };
-      department = profile.department || extractDeptFromName(profile.fullName);
-    }
-  } catch (err) {
-    console.error('Failed to load profile from DB, falling back:', err);
+  if (profile) {
+    dbProfile = {
+      id: profile.id,
+      email: profile.email,
+      fullName: profile.fullName || '',
+      avatarUrl: profile.avatarUrl || '',
+      role: profile.role || 'user',
+    };
+    department = profile.department || extractDeptFromName(profile.fullName);
+  } else {
+    department = extractDeptFromName(dbProfile.fullName);
   }
+
 
   // Fetch top 5 players for the quick mini-leaderboard
   let topPlayers: any[] = [];
