@@ -565,48 +565,6 @@ export default function HUD({
           )}
         </div>
 
-        {/* Active Buffs (Shield / Wings / Kaizen Mode) */}
-        {(shieldRemaining > 0 || wingsRemaining > 0 || isKaizenMode) && (
-          <div className="absolute left-3 top-16 flex flex-col gap-1.5 pointer-events-auto">
-            {shieldRemaining > 0 && (
-              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 px-2.5 py-1 rounded-xl shadow-[0_0_12px_rgba(34,197,94,0.15)] backdrop-blur-sm animate-pulse">
-                <img
-                  src="/assets/items/shield.png"
-                  className="w-5 h-5 object-contain filter drop-shadow-[0_0_4px_rgba(34,197,94,0.5)]"
-                  alt="Shield"
-                />
-                <span className="text-[9px] font-bold text-green-400 font-mono tracking-wider">
-                  🛡️ KHIÊN: {shieldRemaining}s
-                </span>
-              </div>
-            )}
-            {wingsRemaining > 0 && (
-              <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-1 rounded-xl shadow-[0_0_12px_rgba(6,182,212,0.15)] backdrop-blur-sm animate-pulse">
-                <img
-                  src="/assets/items/wing.png"
-                  className="w-5 h-5 object-contain filter drop-shadow-[0_0_4px_rgba(6,182,212,0.5)]"
-                  alt="Wings"
-                />
-                <span className="text-[9px] font-bold text-cyan-400 font-mono tracking-wider">
-                  🪶 CÁNH: {wingsRemaining}s
-                </span>
-              </div>
-            )}
-            {isKaizenMode && (
-              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 px-2.5 py-1 rounded-xl shadow-[0_0_12px_rgba(239,68,68,0.15)] backdrop-blur-sm animate-pulse">
-                <img
-                  src="/assets/items/keyboard.png"
-                  className="w-5 h-5 object-contain filter drop-shadow-[0_0_4px_rgba(239,68,68,0.5)]"
-                  alt="Keyboard"
-                />
-                <span className="text-[9px] font-bold text-red-400 font-mono tracking-wider">
-                  ⌨️ KAIZEN HOẠT ĐỘNG
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Defeated Bugs Counter Panel */}
         {(groundBugsDefeated > 0 || flyingBugsDefeated > 0) && (
           <div className="absolute right-3 top-16 flex flex-col gap-1.5 pointer-events-auto">
