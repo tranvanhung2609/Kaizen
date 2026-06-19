@@ -90,40 +90,51 @@ export default class PreloadScene extends Phaser.Scene {
       });
     });
 
-    // Ground enemies (239x210px frame cells, 2 frames total)
-    this.load.spritesheet('bug1_enemies', '/assets/characters/bug1_enemies.png', {
-      frameWidth: 239,
-      frameHeight: 210
+    // Hanoi enemies generated from Stitch atlas cells.
+    this.load.spritesheet('bug1_enemies', '/assets/images/hanoi/generated/ground_bug_walk.png', {
+      frameWidth: 128,
+      frameHeight: 128
     });
 
-    // Flying enemies (233x238px frame cells, 3 frames total)
-    this.load.spritesheet('bug2_enemies', '/assets/characters/bug2_enemies.png', {
-      frameWidth: 233,
-      frameHeight: 238
+    this.load.spritesheet('bug2_enemies', '/assets/images/hanoi/generated/flying_bug_fly.png', {
+      frameWidth: 192,
+      frameHeight: 192
     });
 
-    // Enemies death/defeat (231x225px frame cells, 2 frames total)
-    this.load.spritesheet('bug1_died_enemies', '/assets/characters/bug1_died_enemies.png', {
-      frameWidth: 231,
-      frameHeight: 225
+    this.load.spritesheet('bug_ground_death', '/assets/images/hanoi/generated/ground_bug_death.png', {
+      frameWidth: 128,
+      frameHeight: 128
+    });
+    this.load.spritesheet('bug_flying_death', '/assets/images/hanoi/generated/flying_bug_death.png', {
+      frameWidth: 192,
+      frameHeight: 192
     });
 
     // Power-ups loaded as single images
     this.load.image('respect_shield', '/assets/items/shield.png');
     this.load.image('responsibility_wings', '/assets/items/wing.png');
     this.load.image('kaizen_keyboard', '/assets/items/keyboard.png');
-    this.load.image('kaizen_bullet', '/assets/items/keycap.png');
+    this.load.spritesheet('kaizen_bullet', '/assets/images/hanoi/generated/keyboard_projectiles_sheet.png', {
+      frameWidth: 256,
+      frameHeight: 128
+    });
+    this.load.spritesheet('kaizen_bullet_explosion', '/assets/images/hanoi/generated/keyboard_explosions_sheet.png', {
+      frameWidth: 256,
+      frameHeight: 128
+    });
 
-    // Boss bullets / electrical voltage
-    this.load.image('security_voltage', '/assets/items/security_voltage.png');
+    // Boss/enemy bullets generated from the Hanoi projectile atlas.
+    this.load.spritesheet('boss_projectile', '/assets/images/hanoi/generated/boss_projectiles_sheet.png', {
+      frameWidth: 128,
+      frameHeight: 128
+    });
 
     // Obstacle (Bomb) loaded as single image
     this.load.image('tech_debt_bomb', '/assets/items/tech_debt_boms.png');
 
-    // Boss spritesheet (192x192px frame cells inside a 1024x1024px grid)
-    this.load.spritesheet('hanoi_boss', '/assets/characters/hanoi_boss.png', {
-      frameWidth: 192,
-      frameHeight: 192
+    this.load.spritesheet('hanoi_boss', '/assets/images/hanoi/generated/boss_sheet.png', {
+      frameWidth: 256,
+      frameHeight: 256
     });
 
     // Experience flask (512x512px single icon)
@@ -143,6 +154,7 @@ export default class PreloadScene extends Phaser.Scene {
     this.createMascotAnimations();
     this.createEnemyAnimations();
     this.createBossAnimations();
+    this.createProjectileAnimations();
 
     // Transition to MenuScene
     this.scene.start('MenuScene');
@@ -219,9 +231,9 @@ export default class PreloadScene extends Phaser.Scene {
       key: 'bug_staging_crawl',
       frames: this.anims.generateFrameNumbers('bug1_enemies', {
         start: 0,
-        end: 1
+        end: 7
       }),
-      frameRate: 6,
+      frameRate: 8,
       repeat: -1
     });
 
@@ -229,15 +241,25 @@ export default class PreloadScene extends Phaser.Scene {
       key: 'bug_prod_fly',
       frames: this.anims.generateFrameNumbers('bug2_enemies', {
         start: 0,
-        end: 2
+        end: 3
       }),
       frameRate: 8,
       repeat: -1
     });
 
     this.anims.create({
-      key: 'bug_death',
-      frames: this.anims.generateFrameNumbers('bug1_died_enemies', {
+      key: 'bug_ground_death',
+      frames: this.anims.generateFrameNumbers('bug_ground_death', {
+        start: 0,
+        end: 1
+      }),
+      frameRate: 8,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'bug_flying_death',
+      frames: this.anims.generateFrameNumbers('bug_flying_death', {
         start: 0,
         end: 1
       }),
@@ -247,17 +269,11 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   private createBossAnimations() {
-    // Cells 192x192px inside 1024x1024 (5 frames per row)
-    // Row 1 (Index 0-4): Idle (6 frames -> spans to Row 2, frames 0-5)
-    // Row 2 (Index 5-9): Attack (8 frames -> frames 5-12)
-    // Row 3 (Index 10-14): Defeated (6 frames -> frames 13-18)
-    const framesPerRow = 5;
-
     this.anims.create({
       key: 'boss_idle',
       frames: this.anims.generateFrameNumbers('hanoi_boss', {
         start: 0,
-        end: 5
+        end: 7
       }),
       frameRate: 8,
       repeat: -1
@@ -266,8 +282,8 @@ export default class PreloadScene extends Phaser.Scene {
     this.anims.create({
       key: 'boss_attack',
       frames: this.anims.generateFrameNumbers('hanoi_boss', {
-        start: 6,
-        end: 13
+        start: 8,
+        end: 11
       }),
       frameRate: 12,
       repeat: 0
@@ -276,11 +292,43 @@ export default class PreloadScene extends Phaser.Scene {
     this.anims.create({
       key: 'boss_defeated',
       frames: this.anims.generateFrameNumbers('hanoi_boss', {
-        start: 14,
-        end: 19
+        start: 12,
+        end: 15
       }),
       frameRate: 10,
       repeat: 0
+    });
+  }
+
+  private createProjectileAnimations() {
+    this.anims.create({
+      key: 'kaizen_bullet_fly',
+      frames: this.anims.generateFrameNumbers('kaizen_bullet', {
+        start: 0,
+        end: 1
+      }),
+      frameRate: 12,
+      repeat: -1
+    });
+
+    this.anims.create({
+      key: 'kaizen_bullet_explode',
+      frames: this.anims.generateFrameNumbers('kaizen_bullet_explosion', {
+        start: 0,
+        end: 1
+      }),
+      frameRate: 16,
+      repeat: 0
+    });
+
+    this.anims.create({
+      key: 'boss_projectile_spin',
+      frames: this.anims.generateFrameNumbers('boss_projectile', {
+        start: 0,
+        end: 0
+      }),
+      frameRate: 10,
+      repeat: -1
     });
   }
 }
