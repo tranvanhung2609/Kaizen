@@ -101,10 +101,6 @@ export class PlayerSystem {
           if (now > state.nextShootTime) {
             this.shoot(now);
           }
-        } else if (phase === 'runner' && state.kaizenEnergy >= 100 && !this.controlsLocked) {
-          // Energy đầy: click/tap = Kích hoạt Kaizen Mode
-          this.activateKaizenMode(this.scene.time.now);
-          state.nextShootTime = this.scene.time.now + 100;
         } else {
           // Không có Kaizen: click/tap = Nhảy
           this.jumpBufferTimeLeft = RUNNER_PHYSICS.JUMP_BUFFER_MS;
@@ -191,7 +187,7 @@ export class PlayerSystem {
       playerBody.setAllowGravity(false);
       this.sprite.setVelocityY(0);
       const flySpeed = RUNNER_PHYSICS.flightSpeed;
-      if (!this.controlsLocked) {
+      if (!this.controlsLocked && state.currentPhase !== 'boss_intro') {
         if (keys.up.isDown || keys.w.isDown) this.sprite.setVelocityY(-flySpeed);
         else if (keys.down.isDown || keys.s.isDown) this.sprite.setVelocityY(flySpeed);
       }
@@ -210,9 +206,12 @@ export class PlayerSystem {
       } else {
         playerBody.setAllowGravity(true);
         playerBody.setGravityY(800);
-        if (!this.controlsLocked) {
+        if (!this.controlsLocked && state.currentPhase !== 'boss_intro') {
           this.handleJump(keys, onGround, playerBody);
           this.handleAnimation(isCrouching, onGround, playerBody);
+        } else {
+          // Vẫn cập nhật animation chạy khi bị khóa phím (trong cutscene)
+          this.handleAnimation(false, onGround, playerBody);
         }
         // Giới hạn tốc độ rơi xuống tối đa (clamp fall speed)
         if (playerBody.velocity.y > RUNNER_PHYSICS.maxFallSpeed) {
@@ -226,13 +225,6 @@ export class PlayerSystem {
       if (!state.isKaizenMode) {
         const energyGain = (RUNNER_PHYSICS.energyPerSecond * this.scene.game.loop.delta) / 1000;
         this.increaseEnergy(energyGain);
-
-        // Manual activation of Kaizen Mode by pressing SPACE when energy is 100%
-        if (state.kaizenEnergy >= 100 && keys.space.isDown && !this.controlsLocked) {
-          this.activateKaizenMode(time);
-          // Set a small shoot delay so they don't immediately shoot on the same frame as activation
-          state.nextShootTime = time + 250;
-        }
       }
     }
 
@@ -240,7 +232,7 @@ export class PlayerSystem {
     // Chỉ cho phép bắn khi đang Kaizen Mode và còn đạn.
     // Giữ Space/Z sẽ bắn theo cooldown; nếu Space vừa dùng để kích hoạt Kaizen,
     // nextShootTime đã trì hoãn viên đầu tiên để tránh bắn ngay cùng frame.
-    if (!this.controlsLocked && state.isKaizenMode && state.kaizenAmmo > 0) {
+    if (!this.controlsLocked && state.currentPhase !== 'boss_intro' && state.isKaizenMode && state.kaizenAmmo > 0) {
       const wantShoot = keys.space.isDown || (keys.z?.isDown ?? false);
       if (wantShoot && time > state.nextShootTime) {
         this.shoot(time);
@@ -344,33 +336,38 @@ export class PlayerSystem {
   private shoot(time: number): void {
     const state = this.state;
     // Guard: không bắn trong các phase không hợp lệ
-    if (['intro', 'game_over', 'map_clear'].includes(state.currentPhase)) return;
+    if (['intro', 'boss_intro', 'game_over', 'map_clear'].includes(state.currentPhase)) return;
     if (time < state.kaizenCooldownUntil) return; // Chặn bắn trong cooldown
     if (!state.isKaizenMode || state.kaizenAmmo <= 0) return; // Phải đang Kaizen và còn đạn
 
     this.audio.playShoot();
     state.nextShootTime = time + RUNNER_PHYSICS.shootCooldown;
-    
-    const startX = this.sprite.x + 40;
-    const startY = this.sprite.y - 10;
-    
-    const frame = Phaser.Math.Between(0, 1);
-    const proj = this.projectiles.create(startX, startY, 'kaizen_bullet', frame) as Phaser.Physics.Arcade.Sprite;
+
+    // Spawn đạn từ tâm vật lý của nhân vật (center của physics body)
+    const playerBody = this.sprite.body as Phaser.Physics.Arcade.Body;
+    const startX = playerBody.center.x;
+    const startY = playerBody.center.y;
+
+    const proj = this.projectiles.create(startX, startY, 'kaizen_bullet') as Phaser.Physics.Arcade.Sprite;
     if (!proj) return;
+
+    // Đảm bảo sprite đạn active và visible (Phaser group đôi khi recycle từ pool cần kích hoạt lại)
     proj
+      .setActive(true)
+      .setVisible(true)
       .setOrigin(0.5, 0.5)
       .setDepth(9)
-      .setDisplaySize(48, 28)
-      .setVelocityX(RUNNER_PHYSICS.bulletSpeed);
-    
+      .setDisplaySize(28, 28);
+
+    // Đặt velocity sau khi setup xong
+    proj.setVelocityX(RUNNER_PHYSICS.bulletSpeed);
+
     const body = proj.body as Phaser.Physics.Arcade.Body;
     if (body) {
       body.setAllowGravity(false);
-      body.updateFromGameObject();
-      body.setSize(42, 18, true);
-      body.setAngularVelocity(360);
+      body.setSize(24, 24, true);
     }
-    
+
     // Gán thông tin sát thương khi bay
     proj.setData('damage', RUNNER_PHYSICS.bulletDamage);
     proj.setData('enemyDamage', 100);
@@ -399,17 +396,24 @@ export class PlayerSystem {
 
   private increaseEnergy(amount: number): void {
     const state = this.state;
-    if (this.scene.time.now < state.kaizenCooldownUntil) {
+    const time = this.scene.time.now;
+    if (time < state.kaizenCooldownUntil) {
       state.kaizenEnergy = 0;
       return;
     }
     state.kaizenEnergy = Math.min(100, state.kaizenEnergy + amount);
+
+    // Auto-activate Kaizen Mode when energy reaches 100%
+    if (state.kaizenEnergy >= 100 && !state.isKaizenMode && !this.controlsLocked) {
+      this.activateKaizenMode(time);
+      state.nextShootTime = time + 250; // Delay next shoot slightly to prevent immediate accidental shooting
+    }
   }
 
   private takeDamage(): void {
     const state = this.state;
     const now = this.scene.time.now;
-    if (state.invulnerableUntil > now) return;
+    if (state.invulnerableUntil > now || state.currentPhase === 'boss_intro') return;
 
     this.audio.playDamage();
     state.hearts = Math.max(0, state.hearts - 1);
@@ -426,6 +430,7 @@ export class PlayerSystem {
 
   private handlePitFall(): void {
     const state = this.state;
+    if (state.currentPhase === 'boss_intro') return;
     this.audio.playDamage();
 
     state.hearts = 0; // Pit fall is immediate death (hearts = 0)

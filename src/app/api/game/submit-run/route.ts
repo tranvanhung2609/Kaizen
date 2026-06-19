@@ -1,55 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { db } from '@/db';
-import { mapRuns, journeyScores } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { mapRuns, journeyScores, profiles } from '@/db/schema';
+import { desc, eq, ne } from 'drizzle-orm';
 import { ensureProfileExists } from '@/lib/profile';
+
+type BestByMap = {
+  hanoi: number;
+  tokyo: number;
+  danang: number;
+};
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Authenticate user session
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Đảm bảo profile và journey_score tồn tại trước khi chèn map_runs để tránh lỗi FK
     try {
       await ensureProfileExists(
         user.id,
         user.email || '',
         user.user_metadata?.full_name || '',
-        user.user_metadata?.avatar_url || ''
+        user.user_metadata?.avatar_url || '',
       );
     } catch (profileErr) {
       console.error('[submit-run] Failed to ensure profile exists:', profileErr);
     }
 
-
-    // 2. Parse request payload
     const body = await request.json();
-    const {
-      mapKey,
-      score,
-      completionTime,
-      bossCleared,
-      // flasksCollected nhận từ client — dùng trong response, không lưu DB (schema chưa có column này)
-    } = body;
+    const mapKey = body.mapKey || 'hanoi';
+    const score = body.score || 0;
+    const completionTime = body.completionTime || 0;
+    const bossCleared = body.bossCleared ?? true;
 
-    // 3. Insert map run — Supabase trigger `trigger_on_map_run_insert` sẽ tự cập nhật journey_scores
-    const [insertedRun] = await db.insert(mapRuns).values({
-      userId: user.id,
-      mapKey: mapKey || 'hanoi',
-      score: score || 0,
-      completionTime: completionTime || 0,
-      bossCleared: bossCleared ?? true,
-    }).returning();
+    const [insertedRun] = await db
+      .insert(mapRuns)
+      .values({
+        userId: user.id,
+        mapKey,
+        score,
+        completionTime,
+        bossCleared,
+      })
+      .returning();
 
-    // 3.1. Cập nhật journey_scores trực tiếp (Application-level fallback phòng ngừa thiếu DB trigger)
-    const runScore = score || 0;
-    const runMapKey = mapKey || 'hanoi';
+    let personalBestByMap: BestByMap = {
+      hanoi: 0,
+      tokyo: 0,
+      danang: 0,
+    };
 
     try {
       const [existingScores] = await db
@@ -59,18 +64,12 @@ export async function POST(request: NextRequest) {
         .limit(1);
 
       if (existingScores) {
-        let hanoiBest = existingScores.hanoiBestScore;
-        let tokyoBest = existingScores.tokyoBestScore;
-        let danangBest = existingScores.danangBestScore;
-
-        if (runMapKey === 'hanoi') {
-          hanoiBest = Math.max(hanoiBest, runScore);
-        } else if (runMapKey === 'tokyo') {
-          tokyoBest = Math.max(tokyoBest, runScore);
-        } else if (runMapKey === 'danang') {
-          danangBest = Math.max(danangBest, runScore);
-        }
-
+        const hanoiBest =
+          mapKey === 'hanoi' ? Math.max(existingScores.hanoiBestScore, score) : existingScores.hanoiBestScore;
+        const tokyoBest =
+          mapKey === 'tokyo' ? Math.max(existingScores.tokyoBestScore, score) : existingScores.tokyoBestScore;
+        const danangBest =
+          mapKey === 'danang' ? Math.max(existingScores.danangBestScore, score) : existingScores.danangBestScore;
         const totalScore = hanoiBest + tokyoBest + danangBest;
 
         await db
@@ -79,69 +78,85 @@ export async function POST(request: NextRequest) {
             hanoiBestScore: hanoiBest,
             tokyoBestScore: tokyoBest,
             danangBestScore: danangBest,
-            totalScore: totalScore,
+            totalScore,
             updatedAt: new Date(),
           })
           .where(eq(journeyScores.userId, user.id));
+
+        personalBestByMap = {
+          hanoi: hanoiBest,
+          tokyo: tokyoBest,
+          danang: danangBest,
+        };
       } else {
-        const hanoiVal = runMapKey === 'hanoi' ? runScore : 0;
-        const tokyoVal = runMapKey === 'tokyo' ? runScore : 0;
-        const danangVal = runMapKey === 'danang' ? runScore : 0;
-        const totalVal = hanoiVal + tokyoVal + danangVal;
+        const hanoiBest = mapKey === 'hanoi' ? score : 0;
+        const tokyoBest = mapKey === 'tokyo' ? score : 0;
+        const danangBest = mapKey === 'danang' ? score : 0;
+        const totalScore = hanoiBest + tokyoBest + danangBest;
 
         await db
           .insert(journeyScores)
           .values({
             userId: user.id,
-            hanoiBestScore: hanoiVal,
-            tokyoBestScore: tokyoVal,
-            danangBestScore: danangVal,
-            totalScore: totalVal,
+            hanoiBestScore: hanoiBest,
+            tokyoBestScore: tokyoBest,
+            danangBestScore: danangBest,
+            totalScore,
             updatedAt: new Date(),
           })
           .onConflictDoNothing();
+
+        personalBestByMap = {
+          hanoi: hanoiBest,
+          tokyo: tokyoBest,
+          danang: danangBest,
+        };
       }
     } catch (dbErr) {
       console.error('[submit-run] Failed to update journey_scores programmatically:', dbErr);
     }
 
-    // 4. Query rank player sau khi trigger chạy hoặc app-level update cập nhật (sync trong same txn/flow)
     let rank = 0;
     let totalPlayers = 0;
     let myTotalScore = score;
 
     try {
-      // Lấy tất cả journey_scores, sort theo totalScore để tính rank
       const allScores = await db
-        .select({ userId: journeyScores.userId, totalScore: journeyScores.totalScore })
+        .select({
+          userId: journeyScores.userId,
+          totalScore: journeyScores.totalScore,
+        })
         .from(journeyScores)
+        .innerJoin(profiles, eq(profiles.id, journeyScores.userId))
+        .where(ne(profiles.role, 'admin'))
         .orderBy(desc(journeyScores.totalScore));
 
       totalPlayers = allScores.length;
-      const myIdx = allScores.findIndex((s) => s.userId === user.id);
-      rank = myIdx >= 0 ? myIdx + 1 : totalPlayers;
+      const myIndex = allScores.findIndex((item) => item.userId === user.id);
+      rank = myIndex >= 0 ? myIndex + 1 : 0;
 
-      // Lấy tổng điểm mới nhất của user (sau khi trigger update)
-      const myScore = allScores.find((s) => s.userId === user.id);
+      const myScore = allScores.find((item) => item.userId === user.id);
       myTotalScore = myScore?.totalScore ?? score;
     } catch (rankErr) {
       console.error('[submit-run] rank query failed (non-fatal):', rankErr);
-      // Không fail toàn bộ request nếu rank query lỗi
     }
 
     return NextResponse.json({
       success: true,
       message: 'Lượt chơi đã được lưu thành công!',
+      savedRun: insertedRun,
       data: insertedRun,
+      personalBestByMap,
+      overallRank: rank,
+      totalRankedUsers: totalPlayers,
       rank,
       totalPlayers,
       totalScore: myTotalScore,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error submitting map run:', err);
-    return NextResponse.json(
-      { error: err.message || 'Lỗi lưu thông số lượt chơi' },
-      { status: 500 }
-    );
+    const message = err instanceof Error ? err.message : 'Lỗi lưu thông số lượt chơi';
+
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

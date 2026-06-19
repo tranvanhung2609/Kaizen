@@ -78,11 +78,23 @@ export default function PhaserGame({
     return () => {
       isUnmounted = true;
       if (gameInstance) {
+        // Off tất cả event listeners trước
         gameInstance.events.off('hud-update');
         gameInstance.events.off('boss-intro-trigger');
         gameInstance.events.off('map-clear-trigger');
         gameInstance.events.off('game-over-trigger');
-        gameInstance.destroy(true);
+        gameInstance.events.off('boss-intro-closed');
+
+        try {
+          // Tắt sound trước khi destroy để tránh lỗi AudioContext đã closed
+          if (gameInstance.sound && gameInstance.sound.context) {
+            gameInstance.sound.mute = true;
+          }
+          gameInstance.destroy(true);
+        } catch (e) {
+          // Bỏ qua lỗi AudioContext suspend/resume khi destroy
+          console.warn('[PhaserGame] Cleanup warning (safe to ignore):', e);
+        }
         gameRef.current = null;
       }
       // Ensure container is empty of any stray canvas elements

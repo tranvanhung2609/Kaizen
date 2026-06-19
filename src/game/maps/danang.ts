@@ -119,7 +119,7 @@ export const danangMapConfig: MapConfig = {
   ],
   bossConfig: {
     name: 'Boss Rồng Sông Hàn Data Storm',
-    maxHp: 2000, // Highest HP
+    maxHp: 500, // Reduced from 2000
     bulletsPattern: 'zigzag',
     bulletSpeed: 350,
     shootInterval: 1500

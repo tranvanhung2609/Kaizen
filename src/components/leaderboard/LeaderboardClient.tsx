@@ -47,11 +47,9 @@ export default function LeaderboardClient({
   const [isPending, startTransition] = useTransition();
   const highlightRef = useRef<HTMLDivElement>(null);
 
-  // Highlight param từ URL (redirect sau khi clear map)
   const highlightFromUrl = searchParams.get('highlight') || highlightUserId;
   const isJustSaved = !!searchParams.get('highlight');
 
-  // Auto-scroll tới row được highlight
   useEffect(() => {
     if (highlightFromUrl && highlightRef.current) {
       setTimeout(() => {
@@ -61,44 +59,43 @@ export default function LeaderboardClient({
   }, [highlightFromUrl]);
 
   const navigate = (tab: string, scope: string) => {
-    // Giữ highlight param khi chuyển tab
     const hParam = highlightFromUrl ? `&highlight=${highlightFromUrl}` : '';
     startTransition(() => router.push(`/leaderboard?tab=${tab}&scope=${scope}${hParam}`));
   };
 
-  const totalCount =
-    currentScope === 'personal'
-      ? myRunCount
-      : currentScope === 'vti'
-      ? deptRows.length
-      : playerRows.length;
+  const totalCount = currentScope === 'personal' ? myRunCount : playerRows.length;
 
   const scopeDesc =
     currentScope === 'personal'
       ? `${myRunCount} lượt chơi của bạn`
       : currentScope === 'department'
-      ? `${playerRows.length} thành viên ${myDept ? `(${myDept})` : ''}`
-      : `${deptRows.length} phòng ban`;
+        ? `${playerRows.length} thành viên ${myDept ? `(${myDept})` : ''}`
+        : `${playerRows.length} người chơi toàn hệ thống`;
 
   const tabLabel =
     currentTab === 'hanoi'
       ? 'Hà Nội'
       : currentTab === 'tokyo'
-      ? 'Tokyo'
-      : currentTab === 'danang'
-      ? 'Đà Nẵng'
-      : 'Tổng hành trình';
+        ? 'Tokyo'
+        : currentTab === 'danang'
+          ? 'Đà Nẵng'
+          : 'Tổng hành trình';
 
   return (
     <div className="flex flex-col gap-6 z-10 relative">
-      
-      {/* ── Victory Banner (hiện khi redirect từ game) ──────────────────────── */}
       {isJustSaved && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px',
-          borderRadius: 16, background: 'linear-gradient(135deg, rgba(0,255,135,0.12) 0%, rgba(0,84,166,0.08) 100%)',
-          border: '1px solid rgba(0,255,135,0.35)', animation: 'slideDown 0.5s ease-out',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            padding: '14px 20px',
+            borderRadius: 16,
+            background: 'linear-gradient(135deg, rgba(0,255,135,0.12) 0%, rgba(0,84,166,0.08) 100%)',
+            border: '1px solid rgba(0,255,135,0.35)',
+            animation: 'slideDown 0.5s ease-out',
+          }}
+        >
           <span style={{ fontSize: 28 }}>🏆</span>
           <div>
             <div style={{ color: '#00ff87', fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
@@ -110,17 +107,18 @@ export default function LeaderboardClient({
           </div>
         </div>
       )}
+
       <style>{`
         @keyframes slideDown { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
-      {/* ── Header Area ────────────────────────────────────────── */}
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
         <div>
           <h1 className="text-3xl font-extrabold font-display text-white tracking-wide uppercase flex items-center gap-2">
             ĐẤU TRƯỜNG KAIZEN LEADERBOARD
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Nơi tôn vinh các chiến binh Kaizen bứt phá deadline tại VTI Group.
+            Xếp hạng cá nhân, phòng ban và tổng user trong hệ thống.
           </p>
         </div>
 
@@ -145,19 +143,19 @@ export default function LeaderboardClient({
         </div>
       </div>
 
-      {/* ── Scope Cards Selector ────────────────────────────────── */}
       <div className="grid sm:grid-cols-3 gap-4">
-        {SCOPES.map((s) => {
-          const active = currentScope === s.id;
-          const disabled = s.id === 'department' && !myDept;
-          
+        {SCOPES.map((scope) => {
+          const active = currentScope === scope.id;
+          const disabled = scope.id === 'department' && !myDept;
+
           let cardBorder = 'border-slate-800/80 hover:border-slate-700';
           let cardGlow = '';
+
           if (active) {
-            if (s.id === 'vti') {
+            if (scope.id === 'vti') {
               cardBorder = 'border-brand-red shadow-[0_0_15px_rgba(255,59,48,0.15)]';
               cardGlow = 'bg-brand-red/5';
-            } else if (s.id === 'department') {
+            } else if (scope.id === 'department') {
               cardBorder = 'border-gold shadow-[0_0_15px_rgba(255,215,0,0.15)]';
               cardGlow = 'bg-gold/5';
             } else {
@@ -168,35 +166,46 @@ export default function LeaderboardClient({
 
           return (
             <button
-              key={s.id}
-              onClick={() => !disabled && navigate(currentTab, s.id)}
+              key={scope.id}
+              onClick={() => !disabled && navigate(currentTab, scope.id)}
               disabled={disabled || isPending}
-              title={disabled ? 'Cập nhật phòng ban trong hồ sơ' : s.desc}
+              title={disabled ? 'Cập nhật phòng ban trong hồ sơ' : scope.desc}
               className={`text-left p-4 rounded-2xl border transition-all duration-300 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed ${cardBorder} ${cardGlow} bg-navy-medium/30 flex items-start gap-3 relative overflow-hidden`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg border ${
-                active 
-                  ? s.id === 'vti' ? 'border-brand-red bg-brand-red/10' : s.id === 'department' ? 'border-gold bg-gold/10' : 'border-brand-cyan bg-brand-cyan/10'
-                  : 'border-slate-700 bg-slate-800/40'
-              }`}>
-                {s.icon}
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg border ${
+                  active
+                    ? scope.id === 'vti'
+                      ? 'border-brand-red bg-brand-red/10'
+                      : scope.id === 'department'
+                        ? 'border-gold bg-gold/10'
+                        : 'border-brand-cyan bg-brand-cyan/10'
+                    : 'border-slate-700 bg-slate-800/40'
+                }`}
+              >
+                {scope.icon}
               </div>
               <div className="flex flex-col min-w-0">
-                <span className={`font-display font-bold text-sm ${
-                  active 
-                    ? s.id === 'vti' ? 'text-brand-red' : s.id === 'department' ? 'text-gold' : 'text-brand-cyan text-glow-cyan'
-                    : 'text-slate-200'
-                }`}>
-                  {s.id === 'department' && myDept ? `${s.label} (${myDept})` : s.label}
+                <span
+                  className={`font-display font-bold text-sm ${
+                    active
+                      ? scope.id === 'vti'
+                        ? 'text-brand-red'
+                        : scope.id === 'department'
+                          ? 'text-gold'
+                          : 'text-brand-cyan text-glow-cyan'
+                      : 'text-slate-200'
+                  }`}
+                >
+                  {scope.id === 'department' && myDept ? `${scope.label} (${myDept})` : scope.label}
                 </span>
-                <span className="text-[10px] text-slate-500 mt-0.5 leading-relaxed font-sans">{s.desc}</span>
+                <span className="text-[10px] text-slate-500 mt-0.5 leading-relaxed font-sans">{scope.desc}</span>
               </div>
             </button>
           );
         })}
       </div>
 
-      {/* ── Map Tabs (Hidden for Personal tab since it shows runs history) ── */}
       {currentScope !== 'personal' && (
         <div className="flex border-b border-slate-800/80 gap-1 overflow-x-auto">
           {TABS.map((tab) => {
@@ -229,7 +238,6 @@ export default function LeaderboardClient({
         </div>
       )}
 
-      {/* ── Stats Strip Indicator ────────────────────────────────── */}
       <div className="flex items-center gap-6 px-2 flex-wrap text-[10px] font-mono text-slate-500">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-brand-cyan animate-pulse" />
@@ -247,15 +255,14 @@ export default function LeaderboardClient({
         )}
       </div>
 
-      {/* ── Empty State / Table Container ────────────────────────── */}
       {currentScope === 'department' && !myDept ? (
         <div className="w-full game-container rounded-3xl border border-slate-800/80 p-16 flex flex-col items-center gap-4 text-center">
           <div className="text-6xl animate-bounce">🏢</div>
           <h2 className="font-display font-extrabold text-white text-lg uppercase tracking-wide">
-            Chưa Cập Nhật Bộ Phận
+            Chưa cập nhật bộ phận
           </h2>
           <p className="text-slate-400 text-sm max-w-sm leading-relaxed">
-            Bạn cần cập nhật bộ phận (phòng ban) trong hồ sơ cá nhân của mình để tranh tài cùng các đồng nghiệp trực tiếp.
+            Bạn cần cập nhật phòng ban trong hồ sơ để xem bảng xếp hạng cùng đồng nghiệp trực tiếp.
           </p>
           <a
             href="/game"
@@ -265,9 +272,12 @@ export default function LeaderboardClient({
           </a>
         </div>
       ) : (
-        <div ref={highlightRef} className={`w-full game-container rounded-3xl overflow-hidden border border-slate-800/80 transition-opacity duration-300 ${
-          isPending ? 'opacity-40 pointer-events-none' : 'opacity-100'
-        }`}>
+        <div
+          ref={highlightRef}
+          className={`w-full game-container rounded-3xl overflow-hidden border border-slate-800/80 transition-opacity duration-300 ${
+            isPending ? 'opacity-40 pointer-events-none' : 'opacity-100'
+          }`}
+        >
           <LeaderboardTable
             scope={currentScope}
             activeTab={currentTab}
@@ -279,22 +289,26 @@ export default function LeaderboardClient({
         </div>
       )}
 
-      {/* ── Bottom Shortcuts Controls ───────────────────────────── */}
       <div className="flex justify-center gap-4 pt-2 pb-6 flex-wrap">
-        <a href="/game"
-           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan text-xs font-bold hover:bg-brand-cyan hover:text-navy-dark transition-all shadow-md">
+        <a
+          href="/game"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan text-xs font-bold hover:bg-brand-cyan hover:text-navy-dark transition-all shadow-md"
+        >
           🎮 CHIẾN GAME NGAY
         </a>
-        <a href="/leaderboard?tab=overall&scope=personal"
-           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/40 text-slate-300 text-xs font-bold hover:border-slate-600 transition-all shadow-md">
+        <a
+          href="/leaderboard?tab=overall&scope=personal"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/40 text-slate-300 text-xs font-bold hover:border-slate-600 transition-all shadow-md"
+        >
           📋 LỊCH SỬ CHẠY CỦA TÔI
         </a>
-        <a href="/leaderboard?tab=overall&scope=vti"
-           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-red/10 border border-brand-red/30 text-brand-red text-xs font-bold hover:bg-brand-red hover:text-white transition-all shadow-md">
+        <a
+          href="/leaderboard?tab=overall&scope=vti"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-red/10 border border-brand-red/30 text-brand-red text-xs font-bold hover:bg-brand-red hover:text-white transition-all shadow-md"
+        >
           🏭 BẢNG XẾP HẠNG VTI TỔNG
         </a>
       </div>
-
     </div>
   );
 }

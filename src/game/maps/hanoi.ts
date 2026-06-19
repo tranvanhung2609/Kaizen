@@ -119,7 +119,7 @@ export const hanoiMapConfig: MapConfig = {
   ],
   bossConfig: {
     name: 'Boss Deadline Cổ Phố',
-    maxHp: 1000,
+    maxHp: 500,
     bulletsPattern: 'straight',
     bulletSpeed: 250,
     shootInterval: 2200 // seconds between attacks
