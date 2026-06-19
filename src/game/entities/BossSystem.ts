@@ -80,6 +80,7 @@ export class BossSystem {
       }
 
       if (!proj || !proj.active) return;
+      this.playBulletExplosion(proj.x, proj.y);
       proj.destroy();
 
       if (state.currentPhase !== 'boss' || !state.bossActive) return;
@@ -277,22 +278,35 @@ export class BossSystem {
       const bullet = this.bossProjectiles.create(
         this.sprite.x + ox,
         this.sprite.y + oy,
-        'security_voltage'
+        'boss_projectile'
       );
       if (!bullet) continue;
       bullet
         .setActive(true)
         .setVisible(true)
-        .setDisplaySize(18, 18)
-        .setTint(0xff3b30)
-        .setDepth(8);
+        .setDisplaySize(60, 60)
+        .setDepth(8)
+        .play('boss_projectile_spin');
 
       // Góc về phía player + spread nhỏ
       const angle = Phaser.Math.Angle.Between(bullet.x, bullet.y, playerX, playerY);
       const speed = mapConfig.bossConfig.bulletSpeed;
       scene.physics.velocityFromAngle(Phaser.Math.RadToDeg(angle), speed, bullet.body.velocity);
       (bullet.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+      (bullet.body as Phaser.Physics.Arcade.Body).setSize(48, 48, true);
     }
+  }
+
+  private playBulletExplosion(x: number, y: number): void {
+    if (!this.scene.textures.exists('kaizen_bullet_explosion')) return;
+
+    const explosion = this.scene.add.sprite(x, y, 'kaizen_bullet_explosion')
+      .setOrigin(0.5, 0.5)
+      .setDepth(10)
+      .setDisplaySize(120, 72);
+
+    explosion.play('kaizen_bullet_explode');
+    explosion.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => explosion.destroy());
   }
 
   /** Kích hoạt dodge ngẫu nhiên */
