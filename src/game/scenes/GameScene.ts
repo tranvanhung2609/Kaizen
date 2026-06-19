@@ -472,14 +472,19 @@ export default class GameScene extends Phaser.Scene {
       enemy.setData('nextShootTime', time + shootInterval * (0.8 + Math.random() * 0.4));
 
       // Tạo đạn nhắm về phía player
-      const bullet = this.enemyBulletsGroup.create(enemy.x, enemy.y, 'security_voltage') as Phaser.Physics.Arcade.Sprite;
+      const bullet = this.enemyBulletsGroup.create(enemy.x, enemy.y, 'boss_projectile') as Phaser.Physics.Arcade.Sprite;
       if (!bullet) continue;
-      bullet.setDisplaySize(14, 14).setTint(0xffaa00).setDepth(8);
+      bullet
+        .setDisplaySize(60, 60)
+        .setTint(0xffaa00)
+        .setDepth(8)
+        .play('boss_projectile_spin');
 
       const shootAngle = Phaser.Math.Angle.Between(enemy.x, enemy.y, playerX, playerY);
       const bSpeed = RUNNER_PHYSICS.enemyBulletSpeed * bulletSpeedMult;
       this.physics.velocityFromAngle(Phaser.Math.RadToDeg(shootAngle), bSpeed, (bullet.body as Phaser.Physics.Arcade.Body).velocity);
       (bullet.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
+      (bullet.body as Phaser.Physics.Arcade.Body).setSize(48, 48, true);
       // Xoay đạn khi bay để nhận diện rõ hơn
       (bullet.body as Phaser.Physics.Arcade.Body).setAngularVelocity(300);
     }

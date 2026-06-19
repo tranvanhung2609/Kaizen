@@ -357,7 +357,8 @@ export class PlayerSystem {
       .setVisible(true)
       .setOrigin(0.5, 0.5)
       .setDepth(9)
-      .setDisplaySize(28, 28);
+      .setDisplaySize(96, 48)
+      .play('kaizen_bullet_fly');
 
     // Đặt velocity sau khi setup xong
     proj.setVelocityX(RUNNER_PHYSICS.bulletSpeed);
@@ -365,7 +366,7 @@ export class PlayerSystem {
     const body = proj.body as Phaser.Physics.Arcade.Body;
     if (body) {
       body.setAllowGravity(false);
-      body.setSize(24, 24, true);
+      body.setSize(80, 36, true);
     }
 
     // Gán thông tin sát thương khi bay
@@ -408,6 +409,25 @@ export class PlayerSystem {
       this.activateKaizenMode(time);
       state.nextShootTime = time + 250; // Delay next shoot slightly to prevent immediate accidental shooting
     }
+  }
+
+  private playEnemyDeath(enemy: Phaser.Physics.Arcade.Sprite): void {
+    const deathAnim = enemy.getData('kind') === 'flying_bug'
+      ? 'bug_flying_death'
+      : 'bug_ground_death';
+    enemy.play(deathAnim, true);
+  }
+
+  private playBulletExplosion(x: number, y: number): void {
+    if (!this.scene.textures.exists('kaizen_bullet_explosion')) return;
+
+    const explosion = this.scene.add.sprite(x, y, 'kaizen_bullet_explosion')
+      .setOrigin(0.5, 0.5)
+      .setDepth(10)
+      .setDisplaySize(120, 72);
+
+    explosion.play('kaizen_bullet_explode');
+    explosion.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => explosion.destroy());
   }
 
   private takeDamage(): void {
@@ -522,7 +542,7 @@ export class PlayerSystem {
       const isStomp = body.velocity.y > 0 && this.sprite.y + 15 < enemy.y;
       const onShield = state.shieldUntil > scene.time.now;
       if (isStomp) {
-        enemy.play('bug_death', true);
+        this.playEnemyDeath(enemy);
         enemy.body.setEnable(false);
         this.sprite.setVelocityY(-250); // Bounce
         audio.playFlask();
@@ -554,6 +574,7 @@ export class PlayerSystem {
     // Player projectile hits enemy
     this.onProjectileHitEnemy = (proj, enemy) => {
       if (!proj?.active || !enemy?.active) return;
+      this.playBulletExplosion(proj.x, proj.y);
       proj.destroy();
       let enemyHp = enemy.getData('hp');
       if (enemyHp === undefined) {
@@ -563,7 +584,7 @@ export class PlayerSystem {
       enemy.setData('hp', enemyHp);
 
       if (enemyHp <= 0) {
-        enemy.play('bug_death', true);
+        this.playEnemyDeath(enemy);
         enemy.body.setEnable(false);
         audio.playFlask();
         const isFlying = enemy.getData('kind') === 'flying_bug';
@@ -601,6 +622,7 @@ export class PlayerSystem {
 
     // Player projectile cancels boss projectile
     this.onProjectileHitBossProjectile = (pProj, bProj) => {
+      this.playBulletExplosion(pProj.x, pProj.y);
       pProj.destroy();
       bProj.destroy();
     };

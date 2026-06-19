@@ -168,8 +168,8 @@ export class SpawnSystem {
 
       if (rand < 0.22) {
         // ── Flask XP trên mặt đất ─────────────────────────────────────────
-        const flask = this.groups.flasks.create(spawnX, 310, 'xp_flask');
-        flask.setDisplaySize(20, 20);
+        const flask = this.groups.flasks.create(spawnX, 300, 'xp_flask');
+        flask.setDisplaySize(48, 48);
         flask.body.updateFromGameObject();
 
       } else if (rand < 0.47 && enemiesSpawned < 4) {
@@ -185,15 +185,15 @@ export class SpawnSystem {
       } else if (rand < 0.76 && obstaclesSpawned < 2) {
         // ── Bom / Cạm bẫy ────────────────────────────────────────────────
         obstaclesSpawned++;
-        const bomb = this.groups.obstacles.create(spawnX, 335, 'tech_debt_bomb');
-        bomb.setDisplaySize(24, 24);
+        const bomb = this.groups.obstacles.create(spawnX, 328, 'tech_debt_bomb');
+        bomb.setDisplaySize(44, 44);
         bomb.body.updateFromGameObject();
 
         // Tier cao: thêm bẫy kép (2 bom gần nhau)
         if (diffTier >= 3 && obstaclesSpawned < 2 && Math.random() < 0.5) {
           obstaclesSpawned++;
-          const bomb2 = this.groups.obstacles.create(spawnX + 48, 335, 'tech_debt_bomb');
-          bomb2.setDisplaySize(24, 24);
+          const bomb2 = this.groups.obstacles.create(spawnX + 48, 328, 'tech_debt_bomb');
+          bomb2.setDisplaySize(44, 44);
           bomb2.body.updateFromGameObject();
         }
 
@@ -206,8 +206,8 @@ export class SpawnSystem {
         else if (r2 < 0.75) { pType = 'wings'; key = 'responsibility_wings'; }
         else { pType = 'keyboard'; key = 'kaizen_keyboard'; }
 
-        const p = this.groups.powerups.create(spawnX, 310, key);
-        p.setDisplaySize(24, 24).setData('kind', pType);
+        const p = this.groups.powerups.create(spawnX, 300, key);
+        p.setDisplaySize(44, 44).setData('kind', pType);
         p.body.updateFromGameObject();
 
       } else if (rand < 0.95 && floatingSpawned < 1) {
@@ -231,7 +231,7 @@ export class SpawnSystem {
     diffTier: number
   ): void {
     const bug = this.groups.enemies.create(spawnX, 330, 'bug1_enemies');
-    bug.setScale(0.2).play('bug_staging_crawl').setData('kind', 'ground_bug');
+    bug.setScale(0.34).play('bug_staging_crawl').setData('kind', 'ground_bug');
     bug.setData('hp', 50);
     bug.setData('speed', Phaser.Math.Between(30, 60));
     bug.setData('targetOffsetX', Phaser.Math.Between(-20, 20));
@@ -254,7 +254,7 @@ export class SpawnSystem {
   ): void {
     const flyY = 220 + Math.random() * 80; // Y=220–300
     const bug = this.groups.enemies.create(spawnX, flyY, 'bug2_enemies');
-    bug.setScale(0.2).play('bug_prod_fly').setData('kind', 'flying_bug');
+    bug.setScale(0.26).play('bug_prod_fly').setData('kind', 'flying_bug');
     bug.setData('hp', 100);
     bug.setData('speed', Phaser.Math.Between(40, 70));
     bug.setData('targetOffsetX', Phaser.Math.Between(-50, 50));
@@ -351,7 +351,7 @@ export class SpawnSystem {
 
       // 60% xác suất có item trên platform floating
       if (Math.random() < 0.60) {
-        this.spawnSkyItem(platX + platW / 2, platY - 22);
+        this.spawnSkyItem(platX + platW / 2, platY - 45);
       }
     }
   }
@@ -362,17 +362,17 @@ export class SpawnSystem {
     const r = Math.random();
     if (r < 0.65) {
       const flask = this.groups.flasks.create(x, y, 'xp_flask');
-      flask.setDisplaySize(20, 20);
+      flask.setDisplaySize(48, 48);
       flask.body.updateFromGameObject();
     } else if (r < 0.88) {
       const pType = Math.random() < 0.5 ? 'respect' : 'wings';
       const key = pType === 'respect' ? 'respect_shield' : 'responsibility_wings';
       const p = this.groups.powerups.create(x, y, key);
-      p.setDisplaySize(24, 24).setData('kind', pType);
+      p.setDisplaySize(44, 44).setData('kind', pType);
       p.body.updateFromGameObject();
     } else {
       const p = this.groups.powerups.create(x, y, 'kaizen_keyboard');
-      p.setDisplaySize(24, 24).setData('kind', 'keyboard');
+      p.setDisplaySize(44, 44).setData('kind', 'keyboard');
       p.body.updateFromGameObject();
     }
   }
