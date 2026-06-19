@@ -21,7 +21,7 @@ export const RUNNER_PHYSICS = {
   
   // Gravity & movement values (standardized for 960x540 canvas)
   gravity: 850,
-  jumpForce: -458,          // Nhảy 1 lần — tăng nhẹ độ cao khi chưa bật Kaizen
+  jumpForce: -440,          // Nhảy 1 lần — đủ để vượt pit 192px ở tốc độ Hanoi
   kaizenJumpForce: -560,    // Super jump (Kaizen mode) — cao hơn một chút
   doubleJumpFactor: 0.80,   // Double jump force = jumpForce * factor
   maxFallSpeed: 600,        // px/s — giới hạn tốc độ rơi tối đa

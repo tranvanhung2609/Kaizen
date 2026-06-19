@@ -73,22 +73,18 @@ function Podium({ top3, scoreKey }: {
         const isBronze = player.rank === 3;
 
         // Visual properties mapping
-        const heightCls = isGold ? 'h-52' : isSilver ? 'h-44' : isBronze ? 'h-36' : 'h-36';
-        const pedestalCls = isGold ? 'pedestal-1' : isSilver ? 'pedestal-2' : isBronze ? 'pedestal-3' : 'pedestal-3';
+        const heightCls = isGold ? 'h-52' : isSilver ? 'h-44' : 'h-36';
+        const pedestalCls = isGold ? 'pedestal-1' : isSilver ? 'pedestal-2' : 'pedestal-3';
         const borderGlow = isGold 
           ? 'border-gold shadow-[0_0_24px_rgba(255,215,0,0.45)]' 
           : isSilver 
           ? 'border-slate-400 shadow-[0_0_16px_rgba(148,163,184,0.25)]' 
-          : isBronze
-          ? 'border-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.25)]'
-          : 'border-slate-700 shadow-none';
+          : 'border-orange-500 shadow-[0_0_12px_rgba(249,115,22,0.25)]';
         const scoreColor = isGold 
           ? 'text-gold text-glow-gold' 
           : isSilver 
           ? 'text-slate-300 font-semibold' 
-          : isBronze
-          ? 'text-orange-400'
-          : 'text-slate-300';
+          : 'text-orange-400';
 
         return (
           <div
@@ -223,10 +219,9 @@ function RunTable({ data }: { data: RunRow[] }) {
 
 // ─── Department Leaderboard Table ──────────────────────────────────────────────
 function PlayerTable({ data, activeTab, highlightUserId }: { data: PlayerRow[]; activeTab: string; highlightUserId?: string }) {
-  const scoreKey: keyof Pick<PlayerRow, 'totalScore' | 'hanoiScore' | 'tokyoScore' | 'danangScore'> =
-    activeTab === 'hanoi' ? 'hanoiScore' :
-    activeTab === 'tokyo' ? 'tokyoScore' :
-    activeTab === 'danang' ? 'danangScore' : 'totalScore';
+  const scoreKey = activeTab === 'hanoi' ? 'hanoiScore' :
+                   activeTab === 'tokyo' ? 'tokyoScore' :
+                   activeTab === 'danang' ? 'danangScore' : 'totalScore';
 
   const top3 = data.slice(0, 3);
 
@@ -239,7 +234,7 @@ function PlayerTable({ data, activeTab, highlightUserId }: { data: PlayerRow[]; 
 
   return (
     <div className="flex flex-col">
-      <Podium top3={top3} scoreKey={scoreKey} />
+      <Podium top3={top3} scoreKey={scoreKey as any} />
       <div className="overflow-x-auto w-full">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -472,6 +467,6 @@ export interface LeaderboardTableProps {
 
 export default function LeaderboardTable({ scope, activeTab, runData, playerData, deptData, highlightUserId }: LeaderboardTableProps) {
   if (scope === 'personal') return <RunTable data={runData ?? []} />;
-  if ((scope as string) === 'department-group') return <DeptTable data={deptData ?? []} activeTab={activeTab} />;
+  if (scope === 'vti')      return <DeptTable data={deptData ?? []} activeTab={activeTab} />;
   return <PlayerTable data={playerData ?? []} activeTab={activeTab} highlightUserId={highlightUserId} />;
 }
