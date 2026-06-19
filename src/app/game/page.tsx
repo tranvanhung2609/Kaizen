@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/auth';
 import { db } from '@/db';
 import { profiles, journeyScores } from '@/db/schema';
-import { eq, desc, ne } from 'drizzle-orm';
+import { eq, desc, ne, sql } from 'drizzle-orm';
 import Navbar from '@/components/Navbar';
 import GameClientWrapper from './GameClientWrapper';
 import { ensureProfileExists } from '@/lib/profile';
@@ -58,12 +58,12 @@ export default async function GamePage() {
         email: profiles.email,
         department: profiles.department,
         avatarUrl: profiles.avatarUrl,
-        totalScore: journeyScores.totalScore,
+        totalScore: sql<number>`COALESCE(${journeyScores.totalScore}, 0)`,
       })
       .from(profiles)
-      .innerJoin(journeyScores, eq(profiles.id, journeyScores.userId))
+      .leftJoin(journeyScores, eq(profiles.id, journeyScores.userId))
       .where(ne(profiles.role, 'admin'))
-      .orderBy(desc(journeyScores.totalScore))
+      .orderBy(desc(sql`COALESCE(${journeyScores.totalScore}, 0)`))
       .limit(5);
 
     topPlayers = records.map((r, idx) => ({

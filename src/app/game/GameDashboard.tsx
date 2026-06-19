@@ -122,8 +122,13 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
   const handleSetMute = (val: boolean) => {
     setIsSoundMuted(val);
     localStorage.setItem('vj_settings_mute', String(val));
-    if (gameRef.current) {
-      gameRef.current.sound.mute = val;
+    // Guard: chỉ set khi game còn sống và sound manager chưa bị destroy
+    if (gameRef.current && gameRef.current.sound && !gameRef.current.isDestroyed) {
+      try {
+        gameRef.current.sound.mute = val;
+      } catch (e) {
+        // AudioContext có thể đã closed — bỏ qua an toàn
+      }
     }
   };
   const handleSetGender = (val: string) => {
@@ -289,6 +294,10 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
 
   const handleCloseBossIntro = () => {
     setBossIntroData(null);
+    // Signal xuống Phaser để boss bắt đầu bay vào màn hình
+    if (gameRef.current) {
+      gameRef.current.events.emit('boss-intro-closed');
+    }
   };
 
   const handleRestartGame = () => {
@@ -430,6 +439,8 @@ export default function GameDashboard({ userDetails, topPlayers }: GameDashboard
               isSaved={isSaved}
               userId={userDetails.id}
               currentMapKey={hudState.mapKey}
+              groundBugsDefeated={hudState.groundBugsDefeated}
+              flyingBugsDefeated={hudState.flyingBugsDefeated}
             />
           </div>
         </ArcadeConsoleFrame>

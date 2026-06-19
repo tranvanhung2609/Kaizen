@@ -171,6 +171,12 @@ export default class GameScene extends Phaser.Scene {
       enemyBullets: this.enemyBulletsGroup,
     }, this.mapConfig);
 
+    // Đảm bảo reset trạng thái con trỏ sinh khi bắt đầu hoặc khởi động lại scene
+    this.spawn.reset({
+      groundX: -128,
+      patternX: 600,
+    });
+
     // 7. Boss system
     this.bossSys.init(
       this,
@@ -352,7 +358,7 @@ export default class GameScene extends Phaser.Scene {
       this.virtualScrollX = 0;
       state.distance = this.playerSys.sprite.x;
       this.playerSys.relativeX = this.playerSys.sprite.x - this.cameras.main.scrollX;
-    } else if (state.currentPhase === 'runner') {
+    } else if (state.currentPhase === 'runner' || state.currentPhase === 'boss') {
       // Cuộn camera theo tốc độ từng map (px/s) nhân với speedMultiplier
       const mapKey = (this.mapConfig.mapKey as MapKey) ?? 'hanoi';
       const basePxPerSec = MAP_SCROLL_SPEEDS[mapKey];
@@ -369,26 +375,28 @@ export default class GameScene extends Phaser.Scene {
       state.activePitRanges = state.activePitRanges.filter(r => r.end > camLeft - 300);
 
       this.spawn.generateTerrain(this.playerSys.sprite.x + 1024, state, this.mapConfig);
-      this.spawn.generatePatterns(this.playerSys.sprite.x, state, this.mapConfig);
       
-      // Boss timer check — chỉ trigger boss; progress bar đã do React HUD xử lý
-      if (state.gameTimeElapsed >= BOSS_DELAY_SEC) {
-        this.progressBarGraphics.clear();
+      if (state.currentPhase === 'runner') {
+        this.spawn.generatePatterns(this.playerSys.sprite.x, state, this.mapConfig);
         
-        state.bossTriggerX = this.playerSys.sprite.x;
-        this.bossSys.checkTrigger(this.playerSys.sprite);
+        // Boss timer check — chỉ trigger boss; progress bar đã do React HUD xử lý
+        if (state.gameTimeElapsed >= BOSS_DELAY_SEC) {
+          this.progressBarGraphics.clear();
+          
+          state.bossTriggerX = this.playerSys.sprite.x;
+          this.bossSys.checkTrigger(this.playerSys.sprite);
+        }
+        this.checkIntermediateCheckpoints();
+      } else {
+        // Trong boss fight, dọn dẹp graphics thanh progress bar thường
+        this.progressBarGraphics.clear();
       }
-      this.checkIntermediateCheckpoints();
-    } else if (state.currentPhase === 'boss' || state.currentPhase === 'boss_intro') {
+    } else if (state.currentPhase === 'boss_intro') {
       this.virtualScrollX = this.cameras.main.scrollX;
       state.distance = this.playerSys.sprite.x;
 
-      // Lock player X at relativeX for boss fight, synchronize during boss intro tween
-      if (state.currentPhase === 'boss') {
-        this.playerSys.sprite.x = this.cameras.main.scrollX + this.playerSys.relativeX;
-      } else {
-        this.playerSys.relativeX = this.playerSys.sprite.x - this.cameras.main.scrollX;
-      }
+      // Đồng bộ relativeX trong quá trình player tween về 20%
+      this.playerSys.relativeX = this.playerSys.sprite.x - this.cameras.main.scrollX;
 
       this.progressBarGraphics.clear();
     }
@@ -407,12 +415,22 @@ export default class GameScene extends Phaser.Scene {
     const diffTier = getDifficultyState(state.score).tier;
     const bulletSpeedMult = 1 + diffTier * DIFFICULTY.ENEMY_SHOOT_SPEED_PER_TIER;
 
+    // Chỉ cho phép quái di chuyển/bắn đạn khi game thực sự chạy (tránh việc lính tự đi/bay mất trong lúc giới thiệu/chờ click start)
+    const shouldProcessEnemyAI = this.isPlaying && (state.currentPhase === 'runner' || state.currentPhase === 'boss');
+
     let activeCount = 0;
     for (const enemy of enemyChildren) {
       if (!enemy || !enemy.active || !enemy.body) continue;
       const distToCam = enemy.x - camScrollX;
       // Chỉ xử lý enemy trong viewport + buffer 200px
       if (distToCam < -100 || distToCam > width + 200) continue;
+
+      if (!shouldProcessEnemyAI) {
+        // Đóng băng di chuyển của quái khi đang ở màn hình chờ hoặc cutscene intro
+        (enemy.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0);
+        continue;
+      }
+
       if (activeCount >= RUNNER_PHYSICS.maxEnemiesOnScreen) break;
       activeCount++;
 

@@ -465,6 +465,9 @@ export default function HUD({
   };
 
   const filledSegments = Math.round((Math.min(100, Math.max(0, energy)) / 100) * ENERGY_SEGMENTS);
+  // Boss HP bar segments (fixed 10 segments)
+  const BOSS_SEGMENTS = 10;
+  const bossFilledSegments = maxBossHp > 0 ? Math.ceil((bossHp / maxBossHp) * BOSS_SEGMENTS) : 0;
 
   return (
     <>
@@ -598,16 +601,16 @@ export default function HUD({
 
               {/* Boss HP segments */}
               <div className="flex flex-col-reverse gap-1 w-4">
-                {[...Array(maxBossHp || 10)].map((_, i) => (
-                  <div
-                    key={i}
-                    className={`h-4 rounded-sm transition-all duration-200 ${
-                      i < bossHp
-                        ? 'bg-brand-red shadow-[0_0_6px_rgba(255,59,48,0.8)]'
-                        : 'bg-slate-800 border border-slate-700/30'
-                    } ${i === bossHp - 1 && bossHp > 0 ? 'animate-segment-flash' : ''}`}
-                  />
-                ))}
+                  {[...Array(BOSS_SEGMENTS)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-4 rounded-sm transition-all duration-200 ${
+                        i < bossFilledSegments
+                          ? 'bg-brand-red shadow-[0_0_6px_rgba(255,59,48,0.8)]'
+                          : 'bg-slate-800 border border-slate-700/30'
+                      } ${i === bossFilledSegments - 1 && bossHp > 0 ? 'animate-segment-flash' : ''}`}
+                    />
+                  ))}
               </div>
 
               {/* HP percent */}

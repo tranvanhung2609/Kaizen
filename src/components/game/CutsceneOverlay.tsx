@@ -24,6 +24,8 @@ interface CutsceneOverlayProps {
   isSaved?: boolean;
   userId?: string;
   currentMapKey?: string;
+  groundBugsDefeated?: number;  // Số bug mặt đất đã hạ trong màn
+  flyingBugsDefeated?: number;  // Số bug bay đã hạ trong màn
 }
 
 // Số đếm ngược animated
@@ -74,6 +76,8 @@ export default function CutsceneOverlay({
   isSaved = false,
   userId,
   currentMapKey = 'hanoi',
+  groundBugsDefeated = 0,
+  flyingBugsDefeated = 0,
 }: CutsceneOverlayProps) {
   const [animIn, setAnimIn] = useState(false);
   const [confettiActive, setConfettiActive] = useState(false);
@@ -398,7 +402,15 @@ export default function CutsceneOverlay({
 
   // ─── 3. MAP CLEAR — VICTORY SCREEN ───────────────────────────────────────
   if (mapClearData) {
-    const { score, flasksCollected, heartsRemaining, gameTime } = mapClearData.stats;
+    const {
+      score, flasksCollected, heartsRemaining, gameTime,
+      // Stats bugs từ BossSystem — có thể thiếu nếu data cũ, dùng prop fallback
+      groundBugsDefeated: statsGroundBugs = 0,
+      flyingBugsDefeated: statsFlyingBugs = 0,
+    } = mapClearData.stats;
+    // Ưu tiên stats từ event, nếu không có thì dùng prop truyền từ HUD
+    const totalGroundBugs = statsGroundBugs || groundBugsDefeated;
+    const totalFlyingBugs = statsFlyingBugs || flyingBugsDefeated;
     const cutscene = mapClearData.cutscene;
     const meta = MAP_META[currentMapKey] || MAP_META.hanoi;
     const vtiMsg = VTI_MESSAGES[currentMapKey] || VTI_MESSAGES.hanoi;
@@ -489,11 +501,13 @@ export default function CutsceneOverlay({
           <ScoreDisplay score={score} isActive={animIn} metaColor={meta.color} />
 
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 18,
+            display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 18,
           }}>
             <StatCard label="XP Flasks" value={`+${flasksCollected || 0}`} icon="🧪" color="#00e5ff" />
             <StatCard label="Máu còn lại" value={`${heartsRemaining || 0}/3`} icon="❤️" color="#ff3b30" />
             <StatCard label="Thời gian" value={`${gameTime || 0}s`} icon="⏱️" color="#ff8500" />
+            <StatCard label="Bug Đất" value={`×${totalGroundBugs}`} icon="🐛" color="#94a3b8" />
+            <StatCard label="Bug Bay" value={`×${totalFlyingBugs}`} icon="🐝" color="#c084fc" />
           </div>
 
           {/* Rank badge */}

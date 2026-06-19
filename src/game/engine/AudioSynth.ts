@@ -5,11 +5,30 @@ export class AudioSynth {
   private ctx: AudioContext | null = null;
 
   private init(): void {
-    if (!this.ctx && typeof window !== 'undefined') {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) this.ctx = new AudioCtx();
+    if (typeof window === 'undefined') return;
+    // Không tạo lại nếu context đang chạy bình thường
+    if (this.ctx && this.ctx.state !== 'closed') return;
+    // Nếu context bị closed (ví dụ: Phaser destroy), set null để tạo mới nếu cần
+    if (this.ctx && this.ctx.state === 'closed') {
+      this.ctx = null;
     }
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioCtx) this.ctx = new AudioCtx();
   }
+
+  /** Giải phóng AudioContext — gọi khi game bị destroy */
+  destroy(): void {
+    if (this.ctx && this.ctx.state !== 'closed') {
+      this.ctx.close().catch(() => {/* ignore */});
+    }
+    this.ctx = null;
+  }
+
+  /** Kiểm tra context có thể phát âm không */
+  private canPlay(): boolean {
+    return !!this.ctx && this.ctx.state !== 'closed';
+  }
+
 
   /** Âm thanh thu thập bình kinh nghiệm — ping cao tần ngắn */
   playFlask(): void {

@@ -23,10 +23,10 @@ export class SpawnSystem {
 
   // Vị trí X tiếp theo cần sinh ground block / pattern
   private nextGroundX = -128;
-  private nextPatternX = 800;
+  private nextPatternX = 400;
 
   // Trạng thái sinh đường chạy ngẫu nhiên (Platform xen kẽ Pit)
-  private nextRandomSegmentX = 800;
+  private nextRandomSegmentX = 400;
   private isGeneratingPlatform = true;
 
   /** Khởi tạo references đến scene và physics groups. Gọi trong create(). */
@@ -40,7 +40,7 @@ export class SpawnSystem {
   reset(options: { groundX?: number; patternX?: number } = {}): void {
     if (options.groundX !== undefined) {
       this.nextGroundX = options.groundX;
-      this.nextRandomSegmentX = Math.max(800, options.groundX);
+      this.nextRandomSegmentX = Math.max(400, options.groundX);
       this.isGeneratingPlatform = true;
     }
     if (options.patternX !== undefined) this.nextPatternX = options.patternX;
@@ -57,8 +57,10 @@ export class SpawnSystem {
     while (this.nextGroundX < playerAheadX) {
       let shouldSpawnBlock = true;
 
-      // Gameplay zone ngẫu nhiên từ X=800 đến sát trước boss
-      if (this.nextGroundX >= 800 && this.nextGroundX < state.bossTriggerX - 500) {
+      // Gameplay zone ngẫu nhiên từ X=400, loại trừ vùng xuất phát của boss để đảm bảo an toàn
+      const isIntroZone = this.nextGroundX >= state.bossTriggerX - 128 && this.nextGroundX < state.bossTriggerX + 384;
+
+      if (this.nextGroundX >= 400 && !isIntroZone) {
         // Khu vực Checkpoint (2000, 4000) bắt buộc có đất
         const isInCheckpointZone =
           (this.nextGroundX >= 1900 && this.nextGroundX <= 2200) ||
@@ -78,7 +80,7 @@ export class SpawnSystem {
             if (this.isGeneratingPlatform) {
               // Platform: Chiều dài ngẫu nhiên 192px–768px (bội số của 64)
               const width = Math.floor(Phaser.Math.Between(192, 768) / 64) * 64;
-              
+
               // Generate all ground blocks for this platform immediately so physics body exists when entities spawn
               for (let offset = 0; offset < width; offset += 64) {
                 const blockX = this.nextGroundX + offset;
@@ -146,7 +148,12 @@ export class SpawnSystem {
     state: GameState,
     mapConfig: MapConfig
   ): void {
-    if (startX < 900 || startX > state.bossTriggerX - 600) return;
+    // 1. Giới hạn khoảng bắt đầu chơi game (hạ xuống 400px để xuất hiện lính/item sớm hơn)
+    if (startX < 400) return;
+
+    // 2. Không sinh trong vùng đệm trước cổng boss (bossTriggerX - 600 đến bossTriggerX)
+    const isInBossGateway = startX >= state.bossTriggerX - 600 && startX < state.bossTriggerX;
+    if (isInBossGateway) return;
 
     const slotsCount = Math.floor(width / 128);
     let enemiesSpawned = 0;   // Tối đa 4 enemies/platform
