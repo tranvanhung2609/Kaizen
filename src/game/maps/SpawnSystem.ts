@@ -149,7 +149,7 @@ export class SpawnSystem {
     if (startX < 900 || startX > state.bossTriggerX - 600) return;
 
     const slotsCount = Math.floor(width / 128);
-    let enemiesSpawned = 0;   // Tối đa 3 enemies/platform
+    let enemiesSpawned = 0;   // Tối đa 4 enemies/platform
     let obstaclesSpawned = 0; // Tối đa 2 bom/platform
     let floatingSpawned = 0;  // Tối đa 1 cụm floating platform/platform mặt đất
 
@@ -159,23 +159,23 @@ export class SpawnSystem {
       const spawnX = startX + 64 + i * 128;
       const rand = Math.random();
 
-      if (rand < 0.20) {
+      if (rand < 0.22) {
         // ── Flask XP trên mặt đất ─────────────────────────────────────────
         const flask = this.groups.flasks.create(spawnX, 310, 'xp_flask');
         flask.setDisplaySize(20, 20);
         flask.body.updateFromGameObject();
 
-      } else if (rand < 0.40 && enemiesSpawned < 3) {
+      } else if (rand < 0.47 && enemiesSpawned < 4) {
         // ── Ground Enemy ──────────────────────────────────────────────────
         enemiesSpawned++;
         this.spawnGroundEnemy(spawnX, state, mapConfig, diffTier);
 
-      } else if (rand < 0.55 && enemiesSpawned < 3) {
+      } else if (rand < 0.66 && enemiesSpawned < 4) {
         // ── Flying Enemy ──────────────────────────────────────────────────
         enemiesSpawned++;
         this.spawnFlyingEnemy(spawnX, state, mapConfig, diffTier);
 
-      } else if (rand < 0.65 && obstaclesSpawned < 2) {
+      } else if (rand < 0.76 && obstaclesSpawned < 2) {
         // ── Bom / Cạm bẫy ────────────────────────────────────────────────
         obstaclesSpawned++;
         const bomb = this.groups.obstacles.create(spawnX, 335, 'tech_debt_bomb');
@@ -190,7 +190,7 @@ export class SpawnSystem {
           bomb2.body.updateFromGameObject();
         }
 
-      } else if (rand < 0.75) {
+      } else if (rand < 0.87) {
         // ── Powerup ───────────────────────────────────────────────────────
         const r2 = Math.random();
         let pType = 'respect';
@@ -203,7 +203,7 @@ export class SpawnSystem {
         p.setDisplaySize(24, 24).setData('kind', pType);
         p.body.updateFromGameObject();
 
-      } else if (rand < 0.88 && floatingSpawned < 1) {
+      } else if (rand < 0.95 && floatingSpawned < 1) {
         // ── Floating Platform bậc thang ───────────────────────────────────
         floatingSpawned++;
         this.spawnFloatingPlatformCluster(spawnX, state, mapConfig);
@@ -211,7 +211,7 @@ export class SpawnSystem {
       } else if (rand < 1.0) {
         // ── Sky Item (item trên trời không trên platform) ─────────────────
         const skyY = Phaser.Math.Between(220, 290);
-        this.spawnSkyItem(spawnX, skyY, state);
+        this.spawnSkyItem(spawnX, skyY);
       }
     }
   }
@@ -297,7 +297,7 @@ export class SpawnSystem {
       // Thêm random ±20% để lính không bắn đồng loạt
       const jitter = interval * (0.8 + Math.random() * 0.4);
 
-      bug.setData('shootInterval', interval);
+      bug.setData('shootInterval', jitter);
       // Delay bắn đầu tiên: 1–3 giây (tránh bắn ngay khi vừa spawn)
       bug.setData('nextShootTime', this.scene.time.now + 1000 + Math.random() * 2000);
     }
@@ -342,22 +342,22 @@ export class SpawnSystem {
         platform.setAlpha(0.7);
       }
 
-      // 45% xác suất có item trên platform floating
-      if (Math.random() < 0.45) {
-        this.spawnSkyItem(platX + platW / 2, platY - 22, state);
+      // 60% xác suất có item trên platform floating
+      if (Math.random() < 0.60) {
+        this.spawnSkyItem(platX + platW / 2, platY - 22);
       }
     }
   }
 
   // ─── Spawn Sky Item (Item Trên Không Trung) ──────────────────────────────────
-  // Flask (60%) | Shield/Wings (25%) | Kaizen Keyboard (15%)
-  private spawnSkyItem(x: number, y: number, _state: GameState): void {
+  // Flask (65%) | Shield/Wings (23%) | Kaizen Keyboard (12%)
+  private spawnSkyItem(x: number, y: number): void {
     const r = Math.random();
-    if (r < 0.60) {
+    if (r < 0.65) {
       const flask = this.groups.flasks.create(x, y, 'xp_flask');
       flask.setDisplaySize(20, 20);
       flask.body.updateFromGameObject();
-    } else if (r < 0.85) {
+    } else if (r < 0.88) {
       const pType = Math.random() < 0.5 ? 'respect' : 'wings';
       const key = pType === 'respect' ? 'respect_shield' : 'responsibility_wings';
       const p = this.groups.powerups.create(x, y, key);
@@ -373,6 +373,9 @@ export class SpawnSystem {
   // ─── Pattern Generation ─────────────────────────────────────────────────────
   // Không sử dụng để tránh xung đột với bộ sinh ngẫu nhiên phía trên
   generatePatterns(_playerX: number, _state: GameState, _mapConfig: MapConfig): void {
+    void _playerX;
+    void _state;
+    void _mapConfig;
     return;
   }
 
@@ -380,8 +383,13 @@ export class SpawnSystem {
   // Hủy các entity đã ra khỏi viewport để tiết kiệm bộ nhớ.
   cullOffscreen(camLeftX: number): void {
     const destroyIfOffscreen = (group: Phaser.Physics.Arcade.Group) => {
-      group.getChildren().forEach((obj: any) => {
-        if (obj.active && obj.x < camLeftX) obj.destroy();
+      group.getChildren().forEach((obj) => {
+        const entity = obj as Phaser.GameObjects.GameObject & {
+          x: number;
+          active: boolean;
+          destroy: () => void;
+        };
+        if (entity.active && entity.x < camLeftX) entity.destroy();
       });
     };
     destroyIfOffscreen(this.groups.enemies);
