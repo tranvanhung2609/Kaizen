@@ -44,10 +44,6 @@ export default class HanoiMapScene extends Phaser.Scene {
   private lastEnergy = -1;
   private lastPhase = '';
 
-  // ── Debug ─────────────────────────────────────────────────────────────────
-  private debugText!: Phaser.GameObjects.Text;
-  private showDebug = true;
-
   // ── Input ─────────────────────────────────────────────────────────────────
   private keys!: {
     left: Phaser.Input.Keyboard.Key;
@@ -56,7 +52,6 @@ export default class HanoiMapScene extends Phaser.Scene {
     down: Phaser.Input.Keyboard.Key;
     s: Phaser.Input.Keyboard.Key;
     space: Phaser.Input.Keyboard.Key;
-    d: Phaser.Input.Keyboard.Key;
   };
 
   constructor() {
@@ -125,7 +120,6 @@ export default class HanoiMapScene extends Phaser.Scene {
       down:  this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN),
       s:     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       space: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE),
-      d:     this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
 
     // Pointer / Touch → Jump Buffer (giống GameScene — click chuột hoặc tap để nhảy)
@@ -143,12 +137,7 @@ export default class HanoiMapScene extends Phaser.Scene {
       enterKey.off('down', onJumpTrigger);
     });
 
-    // ── 9. Key shortcuts ──────────────────────────────────────────────────
     this.input.keyboard!.on('keydown-ESC', () => this.scene.start('MenuScene'));
-    this.input.keyboard!.on('keydown-D',   () => {
-      this.showDebug = !this.showDebug;
-      this.debugText.setVisible(this.showDebug);
-    });
 
     // ── 10. UI Overlays ───────────────────────────────────────────────────
     this.add.text(20, 20, '← ESC to Menu', {
@@ -160,7 +149,7 @@ export default class HanoiMapScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => this.scene.start('MenuScene'));
 
-    this.createDebugHUD();
+
 
     // ── 11. Initial HUD emit ──────────────────────────────────────────────
     this.game.events.emit('hud-update', {
@@ -193,8 +182,7 @@ export default class HanoiMapScene extends Phaser.Scene {
     this.cloudsLayer1.tilePositionX     = cx * 0.05 + this.cloudsOffset1;
     this.fgSceneryLayer2.tilePositionX  = cx * 1.60;
 
-    // ── Debug HUD ─────────────────────────────────────────────────────────
-    if (this.showDebug) this.updateDebugText();
+
 
     this.emitHudState(time);
   }
@@ -301,47 +289,7 @@ export default class HanoiMapScene extends Phaser.Scene {
     });
   }
 
-  // ─── Debug HUD ────────────────────────────────────────────────────────────
-  private createDebugHUD(): void {
-    this.add.graphics()
-      .fillStyle(0x0a0a1a, 0.85)
-      .fillRoundedRect(10, 50, 360, 290, 8)
-      .lineStyle(2, 0x00e5ff, 1)
-      .strokeRoundedRect(10, 50, 360, 290, 8)
-      .setScrollFactor(0).setDepth(9);
 
-    this.debugText = this.add.text(25, 65, '', {
-      font: '12px Courier New, monospace',
-      color: '#ffffff',
-      lineSpacing: 5,
-    }).setScrollFactor(0).setDepth(10);
-  }
-
-  private updateDebugText(): void {
-    const body = this.player.body as Phaser.Physics.Arcade.Body;
-    this.debugText.setText([
-      `─── HANOI PREVIEW DEBUG ───`,
-      `Camera X   : ${Math.round(this.cameras.main.scrollX)} px`,
-      `Scroll Spd : ${this.scrollSpeed.toFixed(1)} px/f`,
-      `Status     : ${this.isPaused ? '⏸ PAUSED' : '▶ RUNNING'}`,
-      `──── Player Physics ────`,
-      `Position   : (${Math.round(this.player.x)}, ${Math.round(this.player.y)})`,
-      `Velocity Y : ${Math.round(body.velocity.y)} px/s`,
-      `On Ground  : ${body.touching.down ? '✅' : '❌'}`,
-      `Coyote     : ${this.coyoteTimeLeft > 0 ? `${Math.round(this.coyoteTimeLeft)}ms` : 'off'}`,
-      `Jump Buffer: ${this.jumpBufferTimeLeft > 0 ? `${Math.round(this.jumpBufferTimeLeft)}ms` : 'off'}`,
-      `Anim       : ${this.player.anims.currentAnim?.key ?? 'none'}`,
-      `──── Parallax Ratios ────`,
-      `L0 Sky      : 0.01x (static)`,
-      `L1 Cloud 1  : 0.05x + wind`,
-      `L2 Cloud 2  : 0.08x + wind`,
-      `L3 FG L1    : 1.40x`,
-      `L4 FG L2    : 1.60x`,
-      `─── Controls ────`,
-      `[SPACE/Click] Jump | [D] Debug`,
-      `[←/→] Speed | [↑↓] Look | [ESC] Menu`,
-    ]);
-  }
 
   private emitHudState(time: number): void {
     const roundedScore = Math.round(this.cameras.main.scrollX);
