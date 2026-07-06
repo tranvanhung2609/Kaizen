@@ -71,4 +71,4 @@ npm run dev
 ```
 Mở [http://localhost:3000](http://localhost:3000) trên trình duyệt để kiểm tra sản phẩm.
 
-<!-- Trigger redeploy: 2026-07-06 -->
+<!-- Trigger redeploy: 2026-07-06 14:32:00 -->
