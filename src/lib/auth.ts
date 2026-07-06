@@ -10,7 +10,9 @@ const ALLOWED_VTI_DOMAINS = [
 ];
 
 export function isVtiEmail(email: string | undefined | null): boolean {
-  return !!email;
+  if (!email) return false;
+  const cleaned = email.trim().toLowerCase();
+  return ALLOWED_VTI_DOMAINS.some(domain => cleaned.endsWith('@' + domain));
 }
 
 export async function getUser() {
