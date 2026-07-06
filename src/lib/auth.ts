@@ -10,9 +10,10 @@ const ALLOWED_VTI_DOMAINS = [
 ];
 
 export function isVtiEmail(email: string | undefined | null): boolean {
-  if (!email) return false;
-  const cleaned = email.trim().toLowerCase();
-  return ALLOWED_VTI_DOMAINS.some(domain => cleaned.endsWith('@' + domain));
+  // if (!email) return false;
+  // const cleaned = email.trim().toLowerCase();
+  // return ALLOWED_VTI_DOMAINS.some(domain => cleaned.endsWith('@' + domain));
+  return !!email;
 }
 
 export async function getUser() {
@@ -26,14 +27,14 @@ export async function requireAuth() {
   if (!user) {
     redirect('/login');
   }
-  
+
   // Enforce VTI email domain restriction
   if (!isVtiEmail(user.email)) {
     const supabase = await createClient();
     await supabase.auth.signOut();
     redirect('/login?error=invalid_domain');
   }
-  
+
   return user;
 }
 
