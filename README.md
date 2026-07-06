@@ -70,3 +70,5 @@ Khởi chạy dự án ở chế độ local dev server:
 npm run dev
 ```
 Mở [http://localhost:3000](http://localhost:3000) trên trình duyệt để kiểm tra sản phẩm.
+
+<!-- Trigger redeploy: 2026-07-06 -->
